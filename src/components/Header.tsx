@@ -28,6 +28,9 @@ export default function Header() {
               <Link href="/ranking" className="hover:text-gray-600 transition-colors">
                 Ranking
               </Link>
+              <Link href="/regulamento" className="hover:text-gray-600 transition-colors">
+                Regulamento
+              </Link>
               {session.user.role === "admin" && (
                 <Link href="/admin" className="hover:text-gray-600 transition-colors">
                   Admin
@@ -86,6 +89,9 @@ export default function Header() {
             </Link>
             <Link href="/ranking" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
               Ranking
+            </Link>
+            <Link href="/regulamento" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
+              Regulamento
             </Link>
             {session.user.role === "admin" && (
               <Link href="/admin" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
