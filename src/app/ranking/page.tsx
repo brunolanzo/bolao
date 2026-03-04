@@ -59,7 +59,7 @@ export default async function RankingPage() {
 
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-green-50">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-500">#</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500">Participante</th>
@@ -87,7 +87,7 @@ export default async function RankingPage() {
                 <tr
                   key={user.id}
                   className={`border-t border-gray-100 ${
-                    user.id === session.user.id ? "bg-gray-50" : ""
+                    user.id === session.user.id ? "bg-yellow-50" : ""
                   }`}
                 >
                   <td className="px-4 py-3">

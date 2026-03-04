@@ -182,8 +182,8 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
     <div>
       {/* Deadline banner */}
       {deadlineStr && !isLocked && (
-        <div className="mb-6 border border-gray-200 rounded-lg px-4 py-3 bg-gray-50 flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mb-6 border border-green-200 rounded-lg px-4 py-3 bg-green-50 flex items-center gap-2">
+          <svg className="w-4 h-4 text-[#009C3B] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm">
@@ -202,7 +202,7 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
           );
 
           return (
-            <div key={groupLabel} className="border border-gray-200 rounded-lg p-4">
+            <div key={groupLabel} className="border border-green-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold">Grupo {groupLabel}</h2>
                 {!isLocked && (
@@ -212,7 +212,7 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
                     className={`text-sm px-3 py-1 rounded-md transition-colors ${
                       saved[groupLabel]
                         ? "bg-green-100 text-green-700"
-                        : "bg-black text-white hover:bg-gray-800"
+                        : "bg-[#009C3B] text-white hover:bg-[#006B2B]"
                     } disabled:opacity-50`}
                   >
                     {saving[groupLabel]
@@ -249,7 +249,7 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
                         value={pred?.homeScore ?? ""}
                         onChange={(e) => updatePrediction(match.id, "homeScore", e.target.value)}
                         disabled={isLocked}
-                        className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100"
+                        className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100"
                       />
                       <span className="text-gray-400">x</span>
                       <input
@@ -259,7 +259,7 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
                         value={pred?.awayScore ?? ""}
                         onChange={(e) => updatePrediction(match.id, "awayScore", e.target.value)}
                         disabled={isLocked}
-                        className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100"
+                        className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100"
                       />
                       <span className="flex-1 truncate">
                         {match.awayTeam?.name || "TBD"}
@@ -271,7 +271,7 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
 
               {/* Standings based on predictions */}
               {allFilled && standings.length > 0 && (
-                <div className="border-t border-gray-100 pt-3">
+                <div className="border-t border-green-100 pt-3">
                   <p className="text-xs text-gray-400 mb-2 uppercase tracking-wider">
                     Classificação (seus palpites)
                   </p>

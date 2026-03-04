@@ -141,8 +141,8 @@ export default function ClassificationPredictions({
     <div className="space-y-8">
       {/* Deadline banner */}
       {deadlineStr && !isLocked && (
-        <div className="border border-gray-200 rounded-lg px-4 py-3 bg-gray-50 flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="border border-green-200 rounded-lg px-4 py-3 bg-green-50 flex items-center gap-2">
+          <svg className="w-4 h-4 text-[#009C3B] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm">
@@ -157,7 +157,7 @@ export default function ClassificationPredictions({
         const selected = selections[phase.key];
 
         return (
-          <div key={phase.key} className="border border-gray-200 rounded-lg p-4">
+          <div key={phase.key} className="border border-green-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold">{phase.label}</h2>
               <span className="text-sm text-gray-400">
@@ -174,8 +174,8 @@ export default function ClassificationPredictions({
                     disabled={isLocked}
                     className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                       isSelected
-                        ? "bg-black text-white border-black"
-                        : "border-gray-300 hover:border-gray-400"
+                        ? "bg-[#009C3B] text-white border-[#009C3B]"
+                        : "border-gray-300 hover:border-[#009C3B]"
                     } disabled:opacity-50`}
                   >
                     {team.code}
@@ -188,7 +188,7 @@ export default function ClassificationPredictions({
       })}
 
       {/* Champion / Runner-up / Third Place */}
-      <div className="border border-gray-200 rounded-lg p-4">
+      <div className="border border-green-200 rounded-lg p-4">
         <h2 className="font-bold mb-3">Campeão, Vice e 3º Lugar</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -197,7 +197,7 @@ export default function ClassificationPredictions({
               value={champion}
               onChange={(e) => setChampion(e.target.value)}
               disabled={isLocked}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B]"
             >
               <option value="">Selecione</option>
               {finalistTeams.map((t) => (
@@ -213,7 +213,7 @@ export default function ClassificationPredictions({
               value={runnerUp}
               onChange={(e) => setRunnerUp(e.target.value)}
               disabled={isLocked}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B]"
             >
               <option value="">Selecione</option>
               {finalistTeams.map((t) => (
@@ -229,7 +229,7 @@ export default function ClassificationPredictions({
               value={thirdPlace}
               onChange={(e) => setThirdPlace(e.target.value)}
               disabled={isLocked}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B]"
             >
               <option value="">Selecione</option>
               {thirdPlaceTeams.map((t) => (
@@ -250,7 +250,7 @@ export default function ClassificationPredictions({
             className={`px-6 py-2.5 rounded-md font-medium transition-colors ${
               saved
                 ? "bg-green-100 text-green-700"
-                : "bg-black text-white hover:bg-gray-800"
+                : "bg-[#009C3B] text-white hover:bg-[#006B2B]"
             } disabled:opacity-50`}
           >
             {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Previsões"}

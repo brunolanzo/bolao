@@ -2,7 +2,14 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #000000;
+  --foreground: #111111;
+
+  /* Paleta Brasil */
+  --brand-green: #009C3B;
+  --brand-green-dark: #006B2B;
+  --brand-green-deeper: #004D20;
+  --brand-yellow: #FFDF00;
+  --brand-yellow-hover: #EDD000;
 }
 
 body {

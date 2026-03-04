@@ -97,7 +97,7 @@ export default async function RegulamentoPage() {
         {sections.map((section, i) => (
           <div key={i} className="border border-gray-200 rounded-xl p-6">
             <h2 className="font-semibold text-base mb-3 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[#FFDF00] text-[#004D20] text-xs flex items-center justify-center font-bold shrink-0">
                 {i + 1}
               </span>
               {section.title}
@@ -120,9 +120,9 @@ export default async function RegulamentoPage() {
         ))}
       </div>
 
-      <div className="mt-8 p-4 bg-black text-white rounded-xl text-sm text-center">
+      <div className="mt-8 p-4 bg-[#006B2B] text-white rounded-xl text-sm text-center">
         <p className="font-semibold mb-1">Bolão Copa do Mundo 2026</p>
-        <p className="text-gray-400 text-xs">Boa sorte a todos os participantes!</p>
+        <p className="text-green-200 text-xs">Boa sorte a todos os participantes!</p>
       </div>
     </div>
   );

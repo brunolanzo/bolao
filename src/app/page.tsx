@@ -127,14 +127,14 @@ function PodiumIcon() {
 ───────────────────────────────────────────────────────────────── */
 function PreviewCard({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white select-none">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-        <span className="text-black">{icon}</span>
+    <div className="border border-green-200 rounded-xl overflow-hidden bg-white select-none">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-green-100">
+        <span className="text-[#009C3B]">{icon}</span>
         <h3 className="font-semibold text-sm tracking-tight">{title}</h3>
       </div>
       <div className="relative h-56 overflow-hidden pointer-events-none">
         <div className="p-4">{children}</div>
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none" />
       </div>
     </div>
   );
@@ -159,7 +159,7 @@ function GroupPreviewContent() {
     <div className="space-y-2">
       <div className="flex justify-between items-center mb-2">
         <span className="text-xs font-bold">Grupo A</span>
-        <span className="text-xs px-2 py-0.5 bg-black text-white rounded font-medium">Salvar</span>
+        <span className="text-xs px-2 py-0.5 bg-[#009C3B] text-white rounded font-medium">Salvar</span>
       </div>
       {matches.map((m, i) => (
         <div key={i} className="flex items-center gap-1.5 text-xs">
@@ -223,7 +223,7 @@ function ClassificationPreviewContent() {
           <span
             key={t.code}
             className={`px-2 py-1 text-[11px] rounded-md border font-medium leading-none ${
-              t.sel ? "bg-black text-white border-black" : "border-gray-300 text-gray-600"
+              t.sel ? "bg-[#009C3B] text-white border-[#009C3B]" : "border-gray-300 text-gray-600"
             }`}
           >
             {t.code}
@@ -315,28 +315,28 @@ export default async function Home() {
     <div className="-mt-6 -mx-4">
 
       {/* ── Hero ─────────────────────────────────────── */}
-      <section className="bg-black text-white">
+      <section className="bg-[#006B2B] text-white">
         <div className="max-w-6xl mx-auto px-4 py-20 text-center">
           <TrophySVG />
-          <p className="text-xs tracking-[0.3em] uppercase text-gray-500 mb-3 font-medium">
+          <p className="text-xs tracking-[0.3em] uppercase text-[#FFDF00] mb-3 font-medium">
             Copa do Mundo FIFA 2026
           </p>
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-4">
             Bolão Copa 2026
           </h1>
-          <p className="text-gray-400 text-lg mb-10 max-w-lg mx-auto leading-relaxed">
+          <p className="text-green-100 text-lg mb-10 max-w-lg mx-auto leading-relaxed">
             Faça seus palpites, preveja os classificados e dispute com seus amigos num ranking ao vivo.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Link
               href="/registro"
-              className="bg-white text-black px-8 py-3 rounded-md font-semibold hover:bg-gray-100 transition-colors"
+              className="bg-[#FFDF00] text-[#004D20] px-8 py-3 rounded-md font-semibold hover:bg-[#EDD000] transition-colors"
             >
               Criar Conta
             </Link>
             <Link
               href="/login"
-              className="border border-white/25 text-white px-8 py-3 rounded-md font-medium hover:bg-white/10 transition-colors"
+              className="border border-white/30 text-white px-8 py-3 rounded-md font-medium hover:bg-white/10 transition-colors"
             >
               Entrar
             </Link>
@@ -371,8 +371,8 @@ export default async function Home() {
       </section>
 
       {/* ── Footer ───────────────────────────────────── */}
-      <footer className="border-t border-gray-100 py-8 px-4 text-center bg-white">
-        <p className="text-xs text-gray-400 tracking-wide">
+      <footer className="border-t border-green-100 py-8 px-4 text-center bg-white">
+        <p className="text-xs text-green-700 tracking-wide">
           Todos direitos reservado a Bruno Lanzo. 2026
         </p>
       </footer>

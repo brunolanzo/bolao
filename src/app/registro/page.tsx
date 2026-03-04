@@ -85,7 +85,7 @@ export default function RegistroPage() {
               name="name"
               type="text"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#009C3B] focus:border-transparent"
               placeholder="Seu nome"
             />
           </div>
@@ -99,7 +99,7 @@ export default function RegistroPage() {
               name="email"
               type="email"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#009C3B] focus:border-transparent"
               placeholder="seu@email.com"
             />
           </div>
@@ -114,7 +114,7 @@ export default function RegistroPage() {
               type="password"
               required
               minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#009C3B] focus:border-transparent"
               placeholder="Mínimo 6 caracteres"
             />
           </div>
@@ -129,7 +129,7 @@ export default function RegistroPage() {
               type="password"
               required
               minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#009C3B] focus:border-transparent"
               placeholder="Repita a senha"
             />
           </div>
@@ -137,7 +137,7 @@ export default function RegistroPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-black text-white py-2.5 rounded-md font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="w-full bg-[#009C3B] text-white py-2.5 rounded-md font-medium hover:bg-[#006B2B] transition-colors disabled:opacity-50"
           >
             {loading ? "Criando conta..." : "Criar Conta"}
           </button>
@@ -145,7 +145,7 @@ export default function RegistroPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Já tem conta?{" "}
-          <Link href="/login" className="text-black font-medium hover:underline">
+          <Link href="/login" className="text-[#009C3B] font-medium hover:underline">
             Faça login
           </Link>
         </p>

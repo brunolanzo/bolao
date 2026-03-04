@@ -58,7 +58,7 @@ export default function LoginPage() {
               name="email"
               type="email"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#009C3B] focus:border-transparent"
               placeholder="seu@email.com"
             />
           </div>
@@ -72,7 +72,7 @@ export default function LoginPage() {
               name="password"
               type="password"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#009C3B] focus:border-transparent"
               placeholder="••••••"
             />
           </div>
@@ -80,7 +80,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-black text-white py-2.5 rounded-md font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="w-full bg-[#009C3B] text-white py-2.5 rounded-md font-medium hover:bg-[#006B2B] transition-colors disabled:opacity-50"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
@@ -88,7 +88,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Não tem conta?{" "}
-          <Link href="/registro" className="text-black font-medium hover:underline">
+          <Link href="/registro" className="text-[#009C3B] font-medium hover:underline">
             Cadastre-se
           </Link>
         </p>

@@ -9,9 +9,9 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="border-b border-green-200 bg-white">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="text-lg font-bold tracking-tight">
+        <Link href="/" className="text-lg font-bold tracking-tight text-[#006B2B]">
           Bolão Copa 2026
         </Link>
 
@@ -19,28 +19,28 @@ export default function Header() {
           <>
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-6 text-sm">
-              <Link href="/palpites/grupos" className="hover:text-gray-600 transition-colors">
+              <Link href="/palpites/grupos" className="hover:text-[#009C3B] transition-colors">
                 Palpites
               </Link>
-              <Link href="/palpites/classificacao" className="hover:text-gray-600 transition-colors">
+              <Link href="/palpites/classificacao" className="hover:text-[#009C3B] transition-colors">
                 Classificação
               </Link>
-              <Link href="/ranking" className="hover:text-gray-600 transition-colors">
+              <Link href="/ranking" className="hover:text-[#009C3B] transition-colors">
                 Ranking
               </Link>
-              <Link href="/regulamento" className="hover:text-gray-600 transition-colors">
+              <Link href="/regulamento" className="hover:text-[#009C3B] transition-colors">
                 Regulamento
               </Link>
               {session.user.role === "admin" && (
-                <Link href="/admin" className="hover:text-gray-600 transition-colors">
+                <Link href="/admin" className="hover:text-[#009C3B] transition-colors">
                   Admin
                 </Link>
               )}
-              <div className="flex items-center gap-3 ml-2 pl-4 border-l border-gray-200">
+              <div className="flex items-center gap-3 ml-2 pl-4 border-l border-green-200">
                 <span className="text-gray-500">{session.user.name}</span>
                 <button
                   onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="text-gray-400 hover:text-black transition-colors"
+                  className="text-[#009C3B] hover:text-[#006B2B] transition-colors"
                 >
                   Sair
                 </button>
@@ -50,7 +50,7 @@ export default function Header() {
             {/* Mobile hamburger */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2"
+              className="md:hidden p-2 text-[#009C3B]"
               aria-label="Menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,12 +64,12 @@ export default function Header() {
           </>
         ) : (
           <nav className="flex items-center gap-4 text-sm">
-            <Link href="/login" className="hover:text-gray-600 transition-colors">
+            <Link href="/login" className="hover:text-[#009C3B] transition-colors">
               Entrar
             </Link>
             <Link
               href="/registro"
-              className="bg-black text-white px-4 py-1.5 rounded-md hover:bg-gray-800 transition-colors"
+              className="bg-[#009C3B] text-white px-4 py-1.5 rounded-md hover:bg-[#006B2B] transition-colors"
             >
               Cadastrar
             </Link>
@@ -79,30 +79,30 @@ export default function Header() {
 
       {/* Mobile menu */}
       {menuOpen && session && (
-        <nav className="md:hidden border-t border-gray-200 bg-white">
+        <nav className="md:hidden border-t border-green-200 bg-white">
           <div className="px-4 py-3 space-y-3 text-sm">
-            <Link href="/palpites/grupos" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
+            <Link href="/palpites/grupos" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Palpites
             </Link>
-            <Link href="/palpites/classificacao" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
+            <Link href="/palpites/classificacao" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Classificação
             </Link>
-            <Link href="/ranking" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
+            <Link href="/ranking" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Ranking
             </Link>
-            <Link href="/regulamento" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
+            <Link href="/regulamento" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Regulamento
             </Link>
             {session.user.role === "admin" && (
-              <Link href="/admin" className="block hover:text-gray-600" onClick={() => setMenuOpen(false)}>
+              <Link href="/admin" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
                 Admin
               </Link>
             )}
-            <div className="pt-3 border-t border-gray-200">
+            <div className="pt-3 border-t border-green-200">
               <span className="text-gray-500 block mb-2">{session.user.name}</span>
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="text-gray-400 hover:text-black transition-colors"
+                className="text-[#009C3B] hover:text-[#006B2B] transition-colors"
               >
                 Sair
               </button>
