@@ -10,7 +10,7 @@ export default function Header() {
   const [paymentPaid, setPaymentPaid] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (session) {
+    if (session && session.user.role !== "admin") {
       fetch("/api/payment")
         .then((res) => res.json())
         .then((data) => setPaymentPaid(data.paid ?? false))
@@ -41,15 +41,17 @@ export default function Header() {
               <Link href="/regulamento" className="hover:text-[#009C3B] transition-colors">
                 Regulamento
               </Link>
-              <Link href="/pagamento" className="hover:text-[#009C3B] transition-colors flex items-center gap-1.5">
-                Pagamento
-                {paymentPaid !== null && (
-                  <span
-                    className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500 animate-pulse-slow"}`}
-                    title={paymentPaid ? "Pago" : "Pendente"}
-                  />
-                )}
-              </Link>
+              {session.user.role !== "admin" && (
+                <Link href="/pagamento" className="hover:text-[#009C3B] transition-colors flex items-center gap-1.5">
+                  Pagamento
+                  {paymentPaid !== null && (
+                    <span
+                      className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500 animate-pulse-slow"}`}
+                      title={paymentPaid ? "Pago" : "Pendente"}
+                    />
+                  )}
+                </Link>
+              )}
               {session.user.role === "admin" && (
                 <Link href="/admin" className="hover:text-[#009C3B] transition-colors">
                   Admin
@@ -112,15 +114,17 @@ export default function Header() {
             <Link href="/regulamento" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Regulamento
             </Link>
-            <Link href="/pagamento" className="flex items-center gap-1.5 hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
-              Pagamento
-              {paymentPaid !== null && (
-                <span
-                  className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500 animate-pulse-slow"}`}
-                  title={paymentPaid ? "Pago" : "Pendente"}
-                />
-              )}
-            </Link>
+            {session.user.role !== "admin" && (
+              <Link href="/pagamento" className="flex items-center gap-1.5 hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                Pagamento
+                {paymentPaid !== null && (
+                  <span
+                    className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500 animate-pulse-slow"}`}
+                    title={paymentPaid ? "Pago" : "Pendente"}
+                  />
+                )}
+              </Link>
+            )}
             {session.user.role === "admin" && (
               <Link href="/admin" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
                 Admin
