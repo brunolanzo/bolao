@@ -71,6 +71,15 @@ export default async function AdminPage() {
           </p>
         </Link>
         <Link
+          href="/admin/pagamentos"
+          className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors"
+        >
+          <h3 className="font-bold mb-1">Pagamentos</h3>
+          <p className="text-sm text-gray-500">
+            Controlar pagamentos e dados bancários
+          </p>
+        </Link>
+        <Link
           href="/admin/configuracoes"
           className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors"
         >

@@ -31,6 +31,9 @@ export default function Header() {
               <Link href="/regulamento" className="hover:text-[#009C3B] transition-colors">
                 Regulamento
               </Link>
+              <Link href="/pagamento" className="hover:text-[#009C3B] transition-colors">
+                Pagamento
+              </Link>
               {session.user.role === "admin" && (
                 <Link href="/admin" className="hover:text-[#009C3B] transition-colors">
                   Admin
@@ -92,6 +95,9 @@ export default function Header() {
             </Link>
             <Link href="/regulamento" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Regulamento
+            </Link>
+            <Link href="/pagamento" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+              Pagamento
             </Link>
             {session.user.role === "admin" && (
               <Link href="/admin" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>

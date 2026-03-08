@@ -78,6 +78,28 @@ CREATE TABLE IF NOT EXISTS "Settings" (
   value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS "Payment" (
+  id        TEXT PRIMARY KEY,
+  userId    TEXT UNIQUE NOT NULL,
+  paid      INTEGER NOT NULL DEFAULT 0,
+  paidAt    TEXT,
+  markedBy  TEXT,
+  FOREIGN KEY (userId) REFERENCES "User"(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "BankDetails" (
+  id        TEXT PRIMARY KEY,
+  userId    TEXT UNIQUE NOT NULL,
+  fullName  TEXT NOT NULL,
+  cpf       TEXT NOT NULL,
+  bank      TEXT NOT NULL,
+  agency    TEXT NOT NULL,
+  account   TEXT NOT NULL,
+  pix       TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES "User"(id) ON DELETE CASCADE
+);
+
 -- ============================================================
 -- TEAMS (48 teams)
 -- ============================================================
