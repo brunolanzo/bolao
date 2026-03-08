@@ -108,7 +108,7 @@ export default async function RegulamentoPage() {
                 <li
                   key={j}
                   className={`text-sm leading-relaxed ${
-                    item.startsWith("→") || item.startsWith("🥇") || item.startsWith("🥈") || item.startsWith("🥉") || item.startsWith("🏆") || item.startsWith("❌") || item.match(/^\d\./)
+                    item.startsWith("→") || item.startsWith("🥇") || item.startsWith("🥈") || item.startsWith("🥉") || item.startsWith("🏆") || item.startsWith("⚽") || item.startsWith("❌") || item.match(/^\d\./)
                       ? "pl-4 text-gray-700"
                       : "text-gray-600"
                   }`}
