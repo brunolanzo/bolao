@@ -45,7 +45,7 @@ export default function Header() {
                 Pagamento
                 {paymentPaid !== null && (
                   <span
-                    className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500"}`}
+                    className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500 animate-pulse-slow"}`}
                     title={paymentPaid ? "Pago" : "Pendente"}
                   />
                 )}
@@ -116,7 +116,7 @@ export default function Header() {
               Pagamento
               {paymentPaid !== null && (
                 <span
-                  className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500"}`}
+                  className={`w-2 h-2 rounded-full ${paymentPaid ? "bg-[#009C3B]" : "bg-red-500 animate-pulse-slow"}`}
                   title={paymentPaid ? "Pago" : "Pendente"}
                 />
               )}
