@@ -21,6 +21,9 @@ export function calcMatchPoints(
     return 3;
   }
 
+  // Wrong winner but got one team's goals correct: 1 point
+  if (predHome === realHome || predAway === realAway) return 1;
+
   return 0;
 }
 

@@ -29,6 +29,7 @@ export default async function RegulamentoPage() {
         "🥇 Placar exato: 7 pontos",
         "🥈 Vencedor correto + acertou os gols de um dos times: 4 pontos",
         "🥉 Vencedor correto ou empate correto (sem acertar o placar): 3 pontos",
+        "⚽ Vencedor errado + acertou os gols de um dos times: 1 ponto",
         "❌ Resultado errado: 0 pontos",
         "A pontuação é não-cumulativa: vale sempre a maior pontuação aplicável.",
       ],
