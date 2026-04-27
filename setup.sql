@@ -108,13 +108,13 @@ CREATE TABLE IF NOT EXISTS "BankDetails" (
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_MEX', 'México',          'MEX', 'A', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_RSA', 'África do Sul',   'RSA', 'A', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_KOR', 'Coreia do Sul',   'KOR', 'A', '');
-INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UD',  'Vencedor UEFA D', 'UD',  'A', '');
+INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UD',  'Tchéquia',              'CZE', 'A', '');
 
 -- Group B
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_CAN', 'Canadá',          'CAN', 'B', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_SUI', 'Suíça',           'SUI', 'B', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_QAT', 'Catar',           'QAT', 'B', '');
-INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UA',  'Vencedor UEFA A', 'UA',  'B', '');
+INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UA',  'Bósnia e Herzegovina',  'BIH', 'B', '');
 
 -- Group C
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_BRA', 'Brasil',          'BRA', 'C', '');
@@ -126,7 +126,7 @@ INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_SC
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_USA', 'Estados Unidos',  'USA', 'D', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_PAR', 'Paraguai',        'PAR', 'D', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_AUS', 'Austrália',       'AUS', 'D', '');
-INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UC',  'Vencedor UEFA C', 'UC',  'D', '');
+INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UC',  'Turquia',               'TUR', 'D', '');
 
 -- Group E
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_GER', 'Alemanha',        'GER', 'E', '');
@@ -138,7 +138,7 @@ INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_EC
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_NED', 'Holanda',         'NED', 'F', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_JPN', 'Japão',           'JPN', 'F', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_TUN', 'Tunísia',         'TUN', 'F', '');
-INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UB',  'Vencedor UEFA B', 'UB',  'F', '');
+INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UB',  'Suécia',                'SWE', 'F', '');
 
 -- Group G
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_BEL', 'Bélgica',         'BEL', 'G', '');
@@ -156,7 +156,7 @@ INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UR
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_FRA', 'França',          'FRA', 'I', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_SEN', 'Senegal',         'SEN', 'I', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_NOR', 'Noruega',         'NOR', 'I', '');
-INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_IC2', 'Vencedor IC 2',   'IC2', 'I', '');
+INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_IC2', 'Iraque',                'IRQ', 'I', '');
 
 -- Group J
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_ARG', 'Argentina',       'ARG', 'J', '');
@@ -168,7 +168,7 @@ INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_JO
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_POR', 'Portugal',        'POR', 'K', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_UZB', 'Uzbequistão',     'UZB', 'K', '');
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_COL', 'Colômbia',        'COL', 'K', '');
-INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_IC1', 'Vencedor IC 1',   'IC1', 'K', '');
+INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_IC1', 'RD do Congo',           'COD', 'K', '');
 
 -- Group L
 INSERT OR IGNORE INTO "Team" (id, name, code, groupLabel, flagUrl) VALUES ('t_GHA', 'Gana',            'GHA', 'L', '');
