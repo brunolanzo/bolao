@@ -31,10 +31,11 @@ interface Props {
 }
 
 const PHASES = [
-  { key: "ROUND_16", label: "Oitavas de Final", count: 16 },
-  { key: "QUARTERS", label: "Quartas de Final", count: 8 },
-  { key: "SEMIS", label: "Semifinais", count: 4 },
-  { key: "FINAL", label: "Finalistas", count: 2 },
+  { key: "ROUND_32", label: "Segunda Fase", count: 32, points: 2 },
+  { key: "ROUND_16", label: "Oitavas de Final", count: 16, points: 4 },
+  { key: "QUARTERS", label: "Quartas de Final", count: 8, points: 6 },
+  { key: "SEMIS", label: "Semifinais", count: 4, points: 8 },
+  { key: "FINAL", label: "Finalistas", count: 2, points: 14 },
 ];
 
 export default function ClassificationPredictions({
@@ -159,7 +160,12 @@ export default function ClassificationPredictions({
         return (
           <div key={phase.key} className="border border-green-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold">{phase.label}</h2>
+              <div>
+                <h2 className="font-bold">{phase.label}</h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  {phase.points} pts por time correto
+                </p>
+              </div>
               <span className="text-sm text-gray-400">
                 {selected.size}/{phase.count} selecionadas
               </span>

@@ -83,8 +83,8 @@ export default function RankingTable({ ranking, currentUserId }: Props) {
                 <th className="text-center px-3 py-2 font-medium" title="Pontos em jogos das eliminatórias">
                   Elim.
                 </th>
-                <th className="text-center px-3 py-2 font-medium border-l border-gray-200" title="Classificados 32avos de Final">
-                  32avos
+                <th className="text-center px-3 py-2 font-medium border-l border-gray-200" title="Classificados Segunda Fase (32 times)">
+                  2ª Fase
                 </th>
                 <th className="text-center px-3 py-2 font-medium" title="Classificados Oitavas de Final">
                   Oitavas
@@ -95,8 +95,8 @@ export default function RankingTable({ ranking, currentUserId }: Props) {
                 <th className="text-center px-3 py-2 font-medium" title="Classificados Semifinais">
                   Semis
                 </th>
-                <th className="text-center px-3 py-2 font-medium" title="Finalistas corretos">
-                  Final.
+                <th className="text-center px-3 py-2 font-medium" title="Finalistas corretos (2 times na grande final)">
+                  Finalistas
                 </th>
                 <th className="text-center px-3 py-2 font-medium border-l border-gray-200" title="Campeão correto (25 pts)">
                   🏆
@@ -266,7 +266,7 @@ export default function RankingTable({ ranking, currentUserId }: Props) {
                       Classificados
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">32avos</span>
+                      <span className="text-gray-500">Segunda Fase</span>
                       <span className="font-medium">{user.round32Pts}</span>
                     </div>
                     <div className="flex justify-between">

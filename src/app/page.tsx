@@ -676,26 +676,26 @@ export default async function Home() {
                 <PhaseTier
                   pts={2}
                   emoji="🎯"
+                  label="Segunda Fase"
+                  detail="32 times classificados"
+                />
+                <PhaseTier
+                  pts={4}
+                  emoji="🎯"
                   label="Oitavas"
                   detail="32 → 16 times"
                 />
                 <PhaseTier
-                  pts={4}
+                  pts={6}
                   emoji="🎯"
                   label="Quartas"
                   detail="16 → 8 times"
                 />
                 <PhaseTier
-                  pts={6}
+                  pts={8}
                   emoji="🎯"
                   label="Semis"
                   detail="8 → 4 times"
-                />
-                <PhaseTier
-                  pts={8}
-                  emoji="🎯"
-                  label="Final"
-                  detail="4 → 2 times"
                 />
                 <PhaseTier
                   pts={14}

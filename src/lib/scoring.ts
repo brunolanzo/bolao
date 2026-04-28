@@ -41,10 +41,10 @@ export const THIRD_PLACE_POINTS = 15;
 
 export const PHASE_LABELS: Record<string, string> = {
   GROUP: "Fase de Grupos",
-  ROUND_32: "32 avos de Final",
+  ROUND_32: "Segunda Fase",
   ROUND_16: "Oitavas de Final",
   QUARTERS: "Quartas de Final",
   SEMIS: "Semifinais",
   THIRD_PLACE: "Disputa 3º Lugar",
-  FINAL: "Final",
+  FINAL: "Finalistas",
 };

@@ -37,13 +37,13 @@ export default async function RegulamentoPage() {
     {
       title: "Previsão de Classificados",
       items: [
-        "Antes do início de cada fase eliminatória, você deve selecionar quais seleções acredita que irão avançar.",
-        "Os palpites de classificados devem ser feitos antes da primeira partida de cada fase.",
+        "Antes da primeira partida da Copa, todos os palpites de classificados de cada fase devem estar preenchidos: Segunda Fase, Oitavas, Quartas, Semifinais e Finalistas.",
+        "Após o início da Copa, esses palpites ficam travados e não podem mais ser alterados.",
         "Pontuação por time classificado corretamente:",
-        "→ Oitavas de final (32 → 16): 2 pontos por time",
-        "→ Quartas de final (16 → 8): 4 pontos por time",
-        "→ Semifinais (8 → 4): 6 pontos por time",
-        "→ Final (4 → 2 finalistas): 8 pontos por time",
+        "→ Segunda Fase (32 times classificados da fase de grupos): 2 pontos por time",
+        "→ Oitavas de final (32 → 16): 4 pontos por time",
+        "→ Quartas de final (16 → 8): 6 pontos por time",
+        "→ Semifinais (8 → 4): 8 pontos por time",
         "→ Finalistas (os 2 times na grande final): 14 pontos por time",
       ],
     },
@@ -51,6 +51,7 @@ export default async function RegulamentoPage() {
       title: "Campeão, Vice e 3º Lugar",
       items: [
         "Você deve selecionar sua previsão de campeão, vice-campeão e terceiro colocado antes do início do torneio.",
+        "Esses palpites também ficam travados após o início da Copa.",
         "🏆 Campeão correto: 25 pontos",
         "🥈 Vice-campeão correto: 20 pontos",
         "🥉 Terceiro colocado correto: 15 pontos",
@@ -58,10 +59,22 @@ export default async function RegulamentoPage() {
       ],
     },
     {
+      title: "Palpites de Placar — Eliminatórias",
+      items: [
+        "Os palpites de placar dos jogos eliminatórios são abertos progressivamente ao longo do torneio:",
+        "→ Ao final da fase de grupos: abre o preenchimento dos jogos da Segunda Fase, até o início do primeiro jogo dessa fase.",
+        "→ Ao final da Segunda Fase: abre o preenchimento dos jogos das Oitavas, até o início do primeiro jogo das Oitavas.",
+        "→ Ao final das Oitavas: abre o preenchimento dos jogos das Quartas, até o início do primeiro jogo das Quartas.",
+        "→ Ao final das Quartas: abre o preenchimento dos jogos das Semifinais, até o início do primeiro jogo das Semifinais.",
+        "→ Ao final das Semifinais: abre o preenchimento dos jogos da Final e da Disputa de 3º e 4º Lugar, até o início desses jogos.",
+        "A pontuação por palpite de placar segue a mesma regra da fase de grupos.",
+      ],
+    },
+    {
       title: "Prazos",
       items: [
-        "Fase de grupos e previsão de campeão/vice/3º: antes da primeira partida da Copa (10 de junho de 2026).",
-        "Classificados de cada fase eliminatória: antes da primeira partida daquela fase.",
+        "Fase de grupos, previsão de classificados (todas as fases) e campeão/vice/3º: antes da primeira partida da Copa.",
+        "Palpites de placar das eliminatórias: cada fase trava no início do seu primeiro jogo.",
         "Palpites enviados após o prazo não serão computados.",
       ],
     },

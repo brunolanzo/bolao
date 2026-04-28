@@ -35,6 +35,19 @@ export default async function EliminatoriasPage() {
     };
   }
 
+  // Compute deadline per knockout phase (= matchDate of first match of that phase)
+  const allKnockoutMatches = await prisma.match.findMany({
+    where: { phase: { not: "GROUP" } },
+    select: { phase: true, matchDate: true },
+    orderBy: { matchDate: "asc" },
+  });
+  const phaseDeadlines: Record<string, string> = {};
+  for (const m of allKnockoutMatches) {
+    if (!phaseDeadlines[m.phase]) {
+      phaseDeadlines[m.phase] = m.matchDate.toISOString();
+    }
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -43,7 +56,7 @@ export default async function EliminatoriasPage() {
         </h1>
         <p className="text-gray-500 text-sm mt-1">
           Preencha seus palpites para os jogos das fases eliminatórias.
-          Confrontos aparecem conforme são definidos pelo administrador.
+          Cada fase trava no início do seu primeiro jogo.
         </p>
       </div>
 
@@ -58,6 +71,7 @@ export default async function EliminatoriasPage() {
         <KnockoutPredictions
           matches={JSON.parse(JSON.stringify(matches))}
           initialPredictions={predMap}
+          phaseDeadlines={phaseDeadlines}
         />
       )}
     </div>

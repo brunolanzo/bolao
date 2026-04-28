@@ -41,19 +41,65 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
     }
 
-    // Check deadline
-    const deadline = await prisma.settings.findUnique({
-      where: { key: "GROUP_DEADLINE" },
+    // Fetch all matches for the predictions to know their phases
+    const matchIds = predictions.map((p) => p.matchId);
+    const matches = await prisma.match.findMany({
+      where: { id: { in: matchIds } },
+      select: { id: true, phase: true, matchDate: true },
     });
 
-    if (deadline && new Date() > new Date(deadline.value)) {
-      // Check if this is group stage - verify first match
-      const firstMatch = await prisma.match.findFirst({
-        where: { id: { in: predictions.map((p) => p.matchId) } },
+    const matchById = new Map(matches.map((m) => [m.id, m]));
+
+    // Compute deadline for each phase based on the first match of that phase
+    const phases = [...new Set(matches.map((m) => m.phase))];
+    const phaseDeadlines: Record<string, Date> = {};
+
+    // GROUP uses GROUP_DEADLINE setting
+    if (phases.includes("GROUP")) {
+      const groupSetting = await prisma.settings.findUnique({
+        where: { key: "GROUP_DEADLINE" },
       });
-      if (firstMatch?.phase === "GROUP") {
+      if (groupSetting) {
+        phaseDeadlines["GROUP"] = new Date(groupSetting.value);
+      }
+    }
+
+    // Knockout phases use the matchDate of the first match of that phase
+    const knockoutPhases = phases.filter((p) => p !== "GROUP");
+    if (knockoutPhases.length > 0) {
+      const phaseFirstMatches = await prisma.match.findMany({
+        where: { phase: { in: knockoutPhases } },
+        orderBy: { matchDate: "asc" },
+      });
+      for (const phase of knockoutPhases) {
+        const firstMatch = phaseFirstMatches.find((m) => m.phase === phase);
+        if (firstMatch) {
+          phaseDeadlines[phase] = new Date(firstMatch.matchDate);
+        }
+      }
+    }
+
+    const now = new Date();
+
+    // Validate each prediction against its phase deadline
+    for (const pred of predictions) {
+      const match = matchById.get(pred.matchId);
+      if (!match) continue;
+      const deadline = phaseDeadlines[match.phase];
+      if (deadline && now > deadline) {
+        const phaseLabel: Record<string, string> = {
+          GROUP: "fase de grupos",
+          ROUND_32: "Segunda Fase",
+          ROUND_16: "Oitavas de Final",
+          QUARTERS: "Quartas de Final",
+          SEMIS: "Semifinais",
+          THIRD_PLACE: "disputa de 3º lugar",
+          FINAL: "Final",
+        };
         return NextResponse.json(
-          { error: "O prazo para palpites da fase de grupos já encerrou" },
+          {
+            error: `O prazo para palpites de ${phaseLabel[match.phase] || match.phase} já encerrou`,
+          },
           { status: 400 }
         );
       }

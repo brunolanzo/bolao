@@ -24,14 +24,44 @@ interface Match {
 interface Props {
   matches: Match[];
   initialPredictions: Record<string, { homeScore: number; awayScore: number }>;
+  phaseDeadlines: Record<string, string>;
 }
 
-export default function KnockoutPredictions({ matches, initialPredictions }: Props) {
+export default function KnockoutPredictions({
+  matches,
+  initialPredictions,
+  phaseDeadlines,
+}: Props) {
   const [predictions, setPredictions] = useState(initialPredictions);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function updatePrediction(matchId: string, field: "homeScore" | "awayScore", value: string) {
+  const now = new Date();
+
+  function isPhaseLocked(phase: string): boolean {
+    const deadline = phaseDeadlines[phase];
+    if (!deadline) return false;
+    return now > new Date(deadline);
+  }
+
+  function formatDeadline(phase: string): string | null {
+    const deadline = phaseDeadlines[phase];
+    if (!deadline) return null;
+    return new Date(deadline).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function updatePrediction(
+    matchId: string,
+    field: "homeScore" | "awayScore",
+    value: string,
+  ) {
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (isNaN(numValue) || numValue < 0) return;
 
@@ -39,8 +69,10 @@ export default function KnockoutPredictions({ matches, initialPredictions }: Pro
       ...prev,
       [matchId]: {
         ...prev[matchId],
-        homeScore: field === "homeScore" ? numValue : (prev[matchId]?.homeScore ?? 0),
-        awayScore: field === "awayScore" ? numValue : (prev[matchId]?.awayScore ?? 0),
+        homeScore:
+          field === "homeScore" ? numValue : (prev[matchId]?.homeScore ?? 0),
+        awayScore:
+          field === "awayScore" ? numValue : (prev[matchId]?.awayScore ?? 0),
       },
     }));
   }
@@ -48,14 +80,22 @@ export default function KnockoutPredictions({ matches, initialPredictions }: Pro
   async function handleSave() {
     setSaving(true);
     setSaved(false);
+    setError(null);
 
+    // Only submit predictions for non-locked phases
     const preds = matches
-      .filter((m) => predictions[m.id])
+      .filter((m) => predictions[m.id] && !isPhaseLocked(m.phase))
       .map((m) => ({
         matchId: m.id,
         homeScore: predictions[m.id].homeScore,
         awayScore: predictions[m.id].awayScore,
       }));
+
+    if (preds.length === 0) {
+      setError("Nenhum palpite editável para salvar.");
+      setSaving(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/predictions", {
@@ -64,38 +104,87 @@ export default function KnockoutPredictions({ matches, initialPredictions }: Pro
         body: JSON.stringify({ predictions: preds }),
       });
 
+      const data = await res.json();
       if (res.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
+      } else {
+        setError(data.error || "Erro ao salvar palpites");
       }
+    } catch {
+      setError("Erro ao salvar palpites");
     } finally {
       setSaving(false);
     }
   }
 
-  // Group by phase
-  const phases = [...new Set(matches.map((m) => m.phase))];
+  // Group by phase, in canonical order
+  const phaseOrder = [
+    "ROUND_32",
+    "ROUND_16",
+    "QUARTERS",
+    "SEMIS",
+    "THIRD_PLACE",
+    "FINAL",
+  ];
+  const phasesPresent = phaseOrder.filter((p) =>
+    matches.some((m) => m.phase === p),
+  );
+
+  // Determine if there's anything editable
+  const hasEditablePhase = phasesPresent.some((p) => !isPhaseLocked(p));
 
   return (
     <div className="space-y-6">
-      {phases.map((phase) => {
+      {phasesPresent.map((phase) => {
         const phaseMatches = matches.filter((m) => m.phase === phase);
+        const locked = isPhaseLocked(phase);
+        const deadlineStr = formatDeadline(phase);
 
         return (
-          <div key={phase} className="border border-gray-200 rounded-lg p-4">
-            <h2 className="font-bold mb-3">{PHASE_LABELS[phase] || phase}</h2>
+          <div
+            key={phase}
+            className={`border rounded-lg p-4 ${
+              locked ? "border-gray-200 bg-gray-50" : "border-green-200"
+            }`}
+          >
+            <div className="flex items-start justify-between mb-3 gap-2">
+              <div>
+                <h2 className="font-bold flex items-center gap-2">
+                  {PHASE_LABELS[phase] || phase}
+                  {locked && (
+                    <span className="text-[10px] uppercase tracking-wider bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                      🔒 Encerrado
+                    </span>
+                  )}
+                </h2>
+                {deadlineStr && (
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {locked ? "Encerrou em " : "Aberto até "}
+                    <span className="font-medium">{deadlineStr}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
               {phaseMatches.map((match) => {
                 const pred = predictions[match.id];
                 const dateStr = new Date(match.matchDate).toLocaleDateString(
                   "pt-BR",
-                  { day: "2-digit", month: "2-digit" }
+                  { day: "2-digit", month: "2-digit" },
                 );
                 const isFinished = match.status === "FINISHED";
+                const disabled = isFinished || locked;
 
                 return (
-                  <div key={match.id} className="flex items-center gap-2 text-sm">
-                    <span className="text-gray-400 text-xs w-10">{dateStr}</span>
+                  <div
+                    key={match.id}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <span className="text-gray-400 text-xs w-10">
+                      {dateStr}
+                    </span>
                     <span className="flex-1 text-right truncate">
                       {match.homeTeam?.name || "TBD"}
                     </span>
@@ -105,10 +194,14 @@ export default function KnockoutPredictions({ matches, initialPredictions }: Pro
                       max={20}
                       value={pred?.homeScore ?? ""}
                       onChange={(e) =>
-                        updatePrediction(match.id, "homeScore", e.target.value)
+                        updatePrediction(
+                          match.id,
+                          "homeScore",
+                          e.target.value,
+                        )
                       }
-                      disabled={isFinished}
-                      className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100"
+                      disabled={disabled}
+                      className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100 disabled:opacity-60"
                     />
                     <span className="text-gray-400">x</span>
                     <input
@@ -117,10 +210,14 @@ export default function KnockoutPredictions({ matches, initialPredictions }: Pro
                       max={20}
                       value={pred?.awayScore ?? ""}
                       onChange={(e) =>
-                        updatePrediction(match.id, "awayScore", e.target.value)
+                        updatePrediction(
+                          match.id,
+                          "awayScore",
+                          e.target.value,
+                        )
                       }
-                      disabled={isFinished}
-                      className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100"
+                      disabled={disabled}
+                      className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100 disabled:opacity-60"
                     />
                     <span className="flex-1 truncate">
                       {match.awayTeam?.name || "TBD"}
@@ -138,19 +235,27 @@ export default function KnockoutPredictions({ matches, initialPredictions }: Pro
         );
       })}
 
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className={`px-6 py-2.5 rounded-md font-medium transition-colors ${
-            saved
-              ? "bg-green-100 text-green-700"
-              : "bg-black text-white hover:bg-gray-800"
-          } disabled:opacity-50`}
-        >
-          {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Palpites"}
-        </button>
-      </div>
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {hasEditablePhase && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-6 py-2.5 rounded-md font-medium transition-colors ${
+              saved
+                ? "bg-green-100 text-green-700"
+                : "bg-[#009C3B] text-white hover:bg-[#006B2B]"
+            } disabled:opacity-50`}
+          >
+            {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Palpites"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
