@@ -305,6 +305,193 @@ function RankingPreviewContent() {
 }
 
 /* ─────────────────────────────────────────────────────────────────
+   SCORING — helpers
+───────────────────────────────────────────────────────────────── */
+function ScoreCard({
+  emoji,
+  pts,
+  title,
+  predHome,
+  predAway,
+  realHome,
+  realAway,
+  matchHome,
+  matchAway,
+  outcome,
+  highlight,
+}: {
+  emoji: string;
+  pts: number;
+  title: string;
+  predHome: number;
+  predAway: number;
+  realHome: number;
+  realAway: number;
+  /** which scores match between palpite and resultado real */
+  matchHome: boolean;
+  matchAway: boolean;
+  /** small footnote below the scoreboard */
+  outcome: string;
+  /** featured tier (placar exato) gets thicker border */
+  highlight?: boolean;
+}) {
+  const cellMatch = "text-[#009C3B] font-bold";
+  const cellMiss = "text-gray-400";
+  const ptsColor =
+    pts === 0 ? "text-gray-300" : pts >= 7 ? "text-[#006B2B]" : "text-[#009C3B]";
+
+  return (
+    <div
+      className={`rounded-xl bg-white p-4 flex flex-col ${
+        highlight
+          ? "border-2 border-[#009C3B] shadow-[0_4px_12px_rgba(0,156,59,0.15)]"
+          : "border border-gray-200"
+      }`}
+    >
+      <div className="text-center mb-3">
+        <div className="text-3xl leading-none mb-1.5">{emoji}</div>
+        <div className={`text-2xl font-bold tracking-tight ${ptsColor}`}>
+          {pts} <span className="text-sm font-medium">pts</span>
+        </div>
+      </div>
+      <p className="text-[11px] font-medium text-gray-700 text-center mb-3 leading-snug min-h-[2.4rem]">
+        {title}
+      </p>
+      <div className="bg-gray-50 rounded-lg p-2 space-y-1 mt-auto">
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="uppercase tracking-wider text-gray-400">
+            Palpite
+          </span>
+          <div className="font-mono text-sm">
+            <span className={matchHome ? cellMatch : "text-gray-700"}>
+              {predHome}
+            </span>
+            <span className="text-gray-300 mx-1.5">×</span>
+            <span className={matchAway ? cellMatch : "text-gray-700"}>
+              {predAway}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="uppercase tracking-wider text-gray-400">Real</span>
+          <div className="font-mono text-sm">
+            <span className={matchHome ? cellMatch : cellMiss}>{realHome}</span>
+            <span className="text-gray-300 mx-1.5">×</span>
+            <span className={matchAway ? cellMatch : cellMiss}>{realAway}</span>
+          </div>
+        </div>
+      </div>
+      <p className="text-[10px] text-gray-400 text-center mt-2 leading-tight italic">
+        {outcome}
+      </p>
+    </div>
+  );
+}
+
+function PhaseTier({
+  label,
+  detail,
+  pts,
+  emoji,
+  highlight,
+}: {
+  label: string;
+  detail: string;
+  pts: number;
+  emoji: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3 sm:flex-col sm:text-center sm:gap-2">
+      <div
+        className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex flex-col items-center justify-center font-bold ${
+          highlight
+            ? "bg-[#FFDF00] text-[#004D20] shadow-md"
+            : "bg-[#009C3B] text-white"
+        }`}
+      >
+        <span className="text-base sm:text-lg leading-none">{pts}</span>
+        <span className="text-[8px] sm:text-[9px] uppercase tracking-wider opacity-80 mt-0.5">
+          pts
+        </span>
+      </div>
+      <div className="flex-1 sm:flex-initial min-w-0">
+        <div className="flex items-center gap-1.5 sm:justify-center">
+          <span className="text-base sm:text-lg">{emoji}</span>
+          <p className="text-sm font-bold tracking-tight">{label}</p>
+        </div>
+        <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mt-0.5">
+          {detail}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Podium() {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8">
+      <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-md mx-auto">
+        {/* 2º Vice */}
+        <div className="flex-1 flex flex-col items-center">
+          <span className="text-3xl sm:text-4xl mb-1">🥈</span>
+          <p className="text-[11px] sm:text-xs font-semibold text-gray-700 mb-1">
+            Vice
+          </p>
+          <div className="w-full bg-gradient-to-b from-gray-200 to-gray-300 rounded-t-lg h-20 sm:h-24 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-xl sm:text-2xl font-bold text-gray-700">20</p>
+              <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-500">
+                pts
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 1º Campeão */}
+        <div className="flex-1 flex flex-col items-center">
+          <span className="text-4xl sm:text-5xl mb-1">🏆</span>
+          <p className="text-xs sm:text-sm font-bold text-[#006B2B] mb-1">
+            Campeão
+          </p>
+          <div className="w-full bg-gradient-to-b from-[#FFDF00] to-[#EDD000] rounded-t-lg h-28 sm:h-32 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-2xl sm:text-3xl font-bold text-[#004D20]">
+                25
+              </p>
+              <p className="text-[10px] sm:text-xs uppercase tracking-wider text-[#004D20] font-medium">
+                pts
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3º Lugar */}
+        <div className="flex-1 flex flex-col items-center">
+          <span className="text-3xl sm:text-4xl mb-1">🥉</span>
+          <p className="text-[11px] sm:text-xs font-semibold text-gray-700 mb-1">
+            3º Lugar
+          </p>
+          <div className="w-full bg-gradient-to-b from-orange-200 to-orange-300 rounded-t-lg h-14 sm:h-16 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-xl sm:text-2xl font-bold text-orange-900">
+                15
+              </p>
+              <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-orange-800">
+                pts
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p className="text-center text-[11px] text-gray-400 mt-4 italic">
+        Você palpita os 3 antes do início da Copa.
+      </p>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
    PAGE
 ───────────────────────────────────────────────────────────────── */
 export default async function Home() {
@@ -366,6 +553,212 @@ export default async function Home() {
             <PreviewCard icon={<PodiumIcon />} title="Ranking dos Participantes">
               <RankingPreviewContent />
             </PreviewCard>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Como ganhar pontos ───────────────────────── */}
+      <section className="py-16 px-4 bg-green-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-block text-xs tracking-[0.3em] uppercase text-[#009C3B] mb-2 font-semibold">
+              Pontuação
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Como você ganha pontos
+            </h2>
+            <p className="text-gray-500 text-sm mt-2 max-w-xl mx-auto">
+              Três formas de pontuar — quanto melhor seu palpite, mais pontos. Aqui está o resumo visual:
+            </p>
+          </div>
+
+          {/* === BLOCO 1: PALPITES DE PLACAR === */}
+          <div className="mb-14">
+            <div className="flex items-center gap-3 mb-1">
+              <span className="w-9 h-9 rounded-full bg-[#FFDF00] text-[#004D20] flex items-center justify-center text-sm font-bold shrink-0">
+                1
+              </span>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+                Palpites de placar
+              </h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-6 ml-12">
+              Em cada jogo da Copa, você palpita o placar. Veja quanto vale cada nível de acerto:
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <ScoreCard
+                emoji="🥇"
+                pts={7}
+                title="Placar exato"
+                predHome={2}
+                predAway={0}
+                realHome={2}
+                realAway={0}
+                matchHome
+                matchAway
+                outcome="Acertou os dois gols"
+                highlight
+              />
+              <ScoreCard
+                emoji="🥈"
+                pts={4}
+                title="Vencedor + gols de um time"
+                predHome={2}
+                predAway={0}
+                realHome={2}
+                realAway={1}
+                matchHome
+                matchAway={false}
+                outcome="Brasil ganhou e fez 2 gols"
+              />
+              <ScoreCard
+                emoji="🥉"
+                pts={3}
+                title="Apenas vencedor ou empate certo"
+                predHome={2}
+                predAway={0}
+                realHome={3}
+                realAway={1}
+                matchHome={false}
+                matchAway={false}
+                outcome="Acertou só o vencedor"
+              />
+              <ScoreCard
+                emoji="⚽"
+                pts={1}
+                title="Errou vencedor mas acertou gols de um time"
+                predHome={2}
+                predAway={0}
+                realHome={2}
+                realAway={3}
+                matchHome
+                matchAway={false}
+                outcome="Brasil fez 2 mas perdeu"
+              />
+              <ScoreCard
+                emoji="❌"
+                pts={0}
+                title="Errou tudo"
+                predHome={2}
+                predAway={0}
+                realHome={0}
+                realAway={1}
+                matchHome={false}
+                matchAway={false}
+                outcome="Vencedor e gols errados"
+              />
+            </div>
+
+            <p className="text-xs text-gray-500 mt-5 text-center sm:text-left sm:ml-12">
+              <span className="inline-block bg-white border border-green-200 rounded-md px-3 py-1.5">
+                💡 Vale sempre a <strong>maior pontuação aplicável</strong> — não é cumulativa.
+              </span>
+            </p>
+          </div>
+
+          {/* === BLOCO 2: CLASSIFICADOS === */}
+          <div className="mb-14">
+            <div className="flex items-center gap-3 mb-1">
+              <span className="w-9 h-9 rounded-full bg-[#FFDF00] text-[#004D20] flex items-center justify-center text-sm font-bold shrink-0">
+                2
+              </span>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+                Acertar quais seleções avançam
+              </h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-6 ml-12">
+              Antes de cada fase eliminatória você prevê os classificados. Quanto mais avançada a fase, mais pontos por time correto:
+            </p>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-5 sm:p-7">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-5 sm:gap-3 items-start">
+                <PhaseTier
+                  pts={2}
+                  emoji="🎯"
+                  label="Oitavas"
+                  detail="32 → 16 times"
+                />
+                <PhaseTier
+                  pts={4}
+                  emoji="🎯"
+                  label="Quartas"
+                  detail="16 → 8 times"
+                />
+                <PhaseTier
+                  pts={6}
+                  emoji="🎯"
+                  label="Semis"
+                  detail="8 → 4 times"
+                />
+                <PhaseTier
+                  pts={8}
+                  emoji="🎯"
+                  label="Final"
+                  detail="4 → 2 times"
+                />
+                <PhaseTier
+                  pts={14}
+                  emoji="⭐"
+                  label="Finalistas"
+                  detail="2 times na grande final"
+                  highlight
+                />
+              </div>
+
+              {/* Setas de progressão (só desktop) */}
+              <div className="hidden sm:flex items-center justify-between mt-5 px-8">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <svg
+                    key={i}
+                    className="w-5 h-5 text-gray-300"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M13 5l7 7-7 7" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-5 text-center sm:text-left sm:ml-12">
+              <span className="inline-block bg-white border border-green-200 rounded-md px-3 py-1.5">
+                💡 Você ganha pontos por <strong>cada time</strong> que classifica corretamente.
+              </span>
+            </p>
+          </div>
+
+          {/* === BLOCO 3: PÓDIO === */}
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <span className="w-9 h-9 rounded-full bg-[#FFDF00] text-[#004D20] flex items-center justify-center text-sm font-bold shrink-0">
+                3
+              </span>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+                Acertar o pódio da Copa
+              </h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-6 ml-12">
+              Antes do início da Copa, você palpita Campeão, Vice e Terceiro Colocado:
+            </p>
+
+            <Podium />
+          </div>
+
+          {/* === Resumo final === */}
+          <div className="mt-12 bg-[#006B2B] text-white rounded-xl p-6 text-center">
+            <p className="text-sm text-green-100 mb-1">Pontuação máxima possível por jogo</p>
+            <p className="text-3xl font-bold tracking-tight">
+              <span className="text-[#FFDF00]">7</span>{" "}
+              <span className="text-base font-medium opacity-80">pts (placar exato)</span>
+            </p>
+            <p className="text-xs text-green-200 mt-3 max-w-md mx-auto">
+              Some os pontos de jogos + classificados + pódio para definir sua posição no ranking ao vivo.
+            </p>
           </div>
         </div>
       </section>
