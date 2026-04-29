@@ -803,14 +803,23 @@ export default function ClassificationPredictions({
               <MatchCard match={FIN} />
               <MatchCard match={THIRD_PLACE} />
             </div>
-            {bracketPicks["FIN"] && (
-              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-center">
-                🏆 Campeão: <strong>{teamById.get(bracketPicks["FIN"]!)?.name}</strong>
-                {bracketPicks["3P"] && (
-                  <> · 🥉 3º: <strong>{teamById.get(bracketPicks["3P"]!)?.name}</strong></>
-                )}
-              </div>
-            )}
+            {bracketPicks["FIN"] && (() => {
+              const champ = bracketPicks["FIN"]!;
+              const finA = resolve(FIN.slotA, FIN.id);
+              const finB = resolve(FIN.slotB, FIN.id);
+              const runnerUp = champ === finA ? finB : champ === finB ? finA : null;
+              return (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-center">
+                  🏆 Campeão: <strong>{teamById.get(champ)?.name}</strong>
+                  {runnerUp && (
+                    <> · 🥈 Vice: <strong>{teamById.get(runnerUp)?.name}</strong></>
+                  )}
+                  {bracketPicks["3P"] && (
+                    <> · 🥉 3º: <strong>{teamById.get(bracketPicks["3P"]!)?.name}</strong></>
+                  )}
+                </div>
+              );
+            })()}
           </section>
         </div>
       )}
