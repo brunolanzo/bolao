@@ -78,11 +78,12 @@ export default function ClassificationPredictions({
     });
   }
 
-  // Get available teams for each phase (based on previous phase selections)
+  // Get available teams for each phase (based on previous phase selections, recursively)
   function getAvailableTeams(phaseIndex: number): Team[] {
-    if (phaseIndex === 0) return teams; // All teams for round of 16
+    if (phaseIndex === 0) return teams;
+    const prevAvailable = getAvailableTeams(phaseIndex - 1);
     const prevPhase = PHASES[phaseIndex - 1];
-    return teams.filter((t) => selections[prevPhase.key].has(t.id));
+    return prevAvailable.filter((t) => selections[prevPhase.key].has(t.id));
   }
 
   async function handleSave() {
@@ -176,6 +177,7 @@ export default function ClassificationPredictions({
                 return (
                   <button
                     key={team.id}
+                    title={team.name}
                     onClick={() => toggleTeam(phase.key, team.id, phase.count)}
                     disabled={isLocked}
                     className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
