@@ -30,10 +30,10 @@ export default function Header() {
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-6 text-sm">
               <Link href="/palpites/grupos" className="hover:text-[#009C3B] transition-colors">
-                Palpites
+                Palpites de Grupos
               </Link>
               <Link href="/palpites/classificacao" className="hover:text-[#009C3B] transition-colors">
-                Classificação
+                Palpites Mata-Mata
               </Link>
               <Link href="/ranking" className="hover:text-[#009C3B] transition-colors">
                 Ranking
@@ -103,10 +103,10 @@ export default function Header() {
         <nav className="md:hidden border-t border-green-200 bg-white">
           <div className="px-4 py-3 space-y-3 text-sm">
             <Link href="/palpites/grupos" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
-              Palpites
+              Palpites de Grupos
             </Link>
             <Link href="/palpites/classificacao" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
-              Classificação
+              Palpites Mata-Mata
             </Link>
             <Link href="/ranking" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Ranking
