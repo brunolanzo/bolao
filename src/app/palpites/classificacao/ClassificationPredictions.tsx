@@ -22,15 +22,43 @@ type BracketPicks = Record<string, string | null>; // matchId → winner teamId
 type ThirdSlots = Record<string, string | null>;   // matchId → teamId in 3rd-place slot
 
 interface BracketState {
-  groupPicks: GroupPicks;
-  qualifiedThirds: string[];
   thirdSlots: ThirdSlots;
   bracketPicks: BracketPicks;
 }
 
+interface GroupMatch {
+  id: string;
+  groupLabel: string | null;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+}
+
+interface ScorePred {
+  homeScore: number;
+  awayScore: number;
+}
+
+interface Standing {
+  teamId: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDiff: number;
+  points: number;
+}
+
 interface Props {
   teams: Team[];
-  initialBracketState: Partial<BracketState>;
+  groupMatches: GroupMatch[];
+  predictionsMap: Record<string, ScorePred>;
+  initialBracketState: Partial<BracketState> & {
+    // tolerate legacy fields from previous saves; we ignore them
+    groupPicks?: unknown;
+    qualifiedThirds?: unknown;
+  };
   isLocked: boolean;
   deadline: string | null;
 }
@@ -154,19 +182,15 @@ function slotLabel(slot: Slot): string {
 
 export default function ClassificationPredictions({
   teams,
+  groupMatches,
+  predictionsMap,
   initialBracketState,
   isLocked,
   deadline,
 }: Props) {
   const [tab, setTab] = useState<"groups" | "bracket">("groups");
 
-  // State
-  const [groupPicks, setGroupPicks] = useState<GroupPicks>(
-    initialBracketState.groupPicks ?? {},
-  );
-  const [qualifiedThirds, setQualifiedThirds] = useState<Set<string>>(
-    new Set(initialBracketState.qualifiedThirds ?? []),
-  );
+  // Bracket state (only what's editable now)
   const [thirdSlots, setThirdSlots] = useState<ThirdSlots>(
     initialBracketState.thirdSlots ?? {},
   );
@@ -192,74 +216,105 @@ export default function ClassificationPredictions({
     return map;
   }, [teams]);
 
-  // 3rd place teams derived from groupPicks (first remaining alphabetically if not explicit)
-  const thirdsByGroup = useMemo(() => {
-    const result: Record<string, Team | null> = {};
+  // ─── Derived: standings from user's group score predictions ──────────────
+  const standingsByGroup = useMemo(() => {
+    const result: Record<string, Standing[]> = {};
+
+    function compareStanding(a: Standing, b: Standing) {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+      if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+      // Final tiebreaker: alphabetical by team name (deterministic)
+      const ta = teamById.get(a.teamId);
+      const tb = teamById.get(b.teamId);
+      return (ta?.name ?? "").localeCompare(tb?.name ?? "");
+    }
+
     for (const g of GROUPS) {
-      const gp = groupPicks[g];
       const grpTeams = teamsByGroup[g] ?? [];
-      const taken = new Set([gp?.first, gp?.second].filter(Boolean));
-      if (gp?.third) {
-        result[g] = teamById.get(gp.third) ?? null;
-      } else {
-        const remaining = grpTeams.filter((t) => !taken.has(t.id));
-        result[g] = remaining[0] ?? null;
+      const standings = new Map<string, Standing>();
+      for (const t of grpTeams) {
+        standings.set(t.id, {
+          teamId: t.id, played: 0, wins: 0, draws: 0, losses: 0,
+          goalsFor: 0, goalsAgainst: 0, goalDiff: 0, points: 0,
+        });
       }
+
+      const grpMatches = groupMatches.filter((m) => m.groupLabel === g);
+      for (const m of grpMatches) {
+        if (!m.homeTeamId || !m.awayTeamId) continue;
+        const pred = predictionsMap[m.id];
+        if (!pred) continue;
+        const h = standings.get(m.homeTeamId);
+        const a = standings.get(m.awayTeamId);
+        if (!h || !a) continue;
+        h.played++; a.played++;
+        h.goalsFor += pred.homeScore;
+        h.goalsAgainst += pred.awayScore;
+        a.goalsFor += pred.awayScore;
+        a.goalsAgainst += pred.homeScore;
+        if (pred.homeScore > pred.awayScore) {
+          h.wins++; h.points += 3; a.losses++;
+        } else if (pred.homeScore < pred.awayScore) {
+          a.wins++; a.points += 3; h.losses++;
+        } else {
+          h.draws++; h.points++; a.draws++; a.points++;
+        }
+      }
+      for (const s of standings.values()) s.goalDiff = s.goalsFor - s.goalsAgainst;
+
+      result[g] = Array.from(standings.values()).sort(compareStanding);
     }
     return result;
-  }, [groupPicks, teamsByGroup, teamById]);
+  }, [teamsByGroup, groupMatches, predictionsMap, teamById]);
+
+  // groupPicks (1st/2nd/3rd) derived from standings
+  const groupPicks: GroupPicks = useMemo(() => {
+    const result: GroupPicks = {};
+    for (const g of GROUPS) {
+      const s = standingsByGroup[g] ?? [];
+      result[g] = {
+        first: s[0]?.teamId ?? null,
+        second: s[1]?.teamId ?? null,
+        third: s[2]?.teamId ?? null,
+      };
+    }
+    return result;
+  }, [standingsByGroup]);
+
+  // 8 best 3rds derived from standings (top 8 by pts → SG → GP → name)
+  const qualifiedThirds: Set<string> = useMemo(() => {
+    const thirds: Standing[] = [];
+    for (const g of GROUPS) {
+      const s = standingsByGroup[g];
+      if (s && s[2]) thirds.push(s[2]);
+    }
+    thirds.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+      if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+      const ta = teamById.get(a.teamId);
+      const tb = teamById.get(b.teamId);
+      return (ta?.name ?? "").localeCompare(tb?.name ?? "");
+    });
+    return new Set(thirds.slice(0, 8).map((s) => s.teamId));
+  }, [standingsByGroup, teamById]);
+
+  // Track per-group prediction completeness
+  const incompleteGroups = useMemo(() => {
+    const result: string[] = [];
+    for (const g of GROUPS) {
+      const grpMatches = groupMatches.filter((m) => m.groupLabel === g);
+      if (grpMatches.length === 0) continue;
+      const allPredicted = grpMatches.every((m) => predictionsMap[m.id]);
+      if (!allPredicted) result.push(g);
+    }
+    return result;
+  }, [groupMatches, predictionsMap]);
 
   // Resolve slot helper bound to current state
   const resolve = (slot: Slot, matchId: string) =>
     resolveSlot(slot, matchId, groupPicks, thirdSlots, bracketPicks);
-
-  // ─── Group picks ────────────────────────────────────────────────────────────
-
-  function clickTeamInGroup(group: string, teamId: string) {
-    if (isLocked) return;
-    setGroupPicks((prev) => {
-      const gp = prev[group] ?? { first: null, second: null, third: null };
-
-      if (gp.first === teamId) {
-        // Deselect 1st → shift up
-        return { ...prev, [group]: { first: gp.second, second: gp.third, third: null } };
-      }
-      if (gp.second === teamId) {
-        return { ...prev, [group]: { first: gp.first, second: gp.third, third: null } };
-      }
-      if (gp.third === teamId) {
-        return { ...prev, [group]: { first: gp.first, second: gp.second, third: null } };
-      }
-      // Assign to next available position
-      if (!gp.first) return { ...prev, [group]: { ...gp, first: teamId } };
-      if (!gp.second) return { ...prev, [group]: { ...gp, second: teamId } };
-      if (!gp.third) return { ...prev, [group]: { ...gp, third: teamId } };
-      return prev; // all 3 taken, ignore
-    });
-  }
-
-  // ─── Qualified thirds ───────────────────────────────────────────────────────
-
-  function toggleQualifiedThird(teamId: string) {
-    if (isLocked) return;
-    setQualifiedThirds((prev) => {
-      const next = new Set(prev);
-      if (next.has(teamId)) {
-        next.delete(teamId);
-        // Clear any thirdSlot that used this team
-        setThirdSlots((ts) => {
-          const updated = { ...ts };
-          for (const k of Object.keys(updated)) {
-            if (updated[k] === teamId) updated[k] = null;
-          }
-          return updated;
-        });
-      } else if (next.size < 8) {
-        next.add(teamId);
-      }
-      return next;
-    });
-  }
 
   // ─── Third-slot assignment ───────────────────────────────────────────────────
 
@@ -338,12 +393,7 @@ export default function ClassificationPredictions({
         ? { championTeamId: finalWinner, runnerUpTeamId: finalLoser, thirdPlaceTeamId: thirdWinner }
         : undefined;
 
-    const bracketState: BracketState = {
-      groupPicks,
-      qualifiedThirds: Array.from(qualifiedThirds),
-      thirdSlots,
-      bracketPicks,
-    };
+    const bracketState: BracketState = { thirdSlots, bracketPicks };
 
     try {
       const res = await fetch("/api/bracket", {
@@ -375,11 +425,7 @@ export default function ClassificationPredictions({
     : null;
 
   // Progress counts
-  const groupsDone = GROUPS.filter((g) => {
-    const gp = groupPicks[g];
-    return gp?.first && gp?.second;
-  }).length;
-  const thirdsDone = qualifiedThirds.size;
+  const groupsDone = GROUPS.filter((g) => !incompleteGroups.includes(g)).length;
   const r32Done = R32.filter((m) => bracketPicks[m.id]).length;
 
   // ─── Match card component (inline) ──────────────────────────────────────────
@@ -524,7 +570,7 @@ export default function ClassificationPredictions({
             }`}
           >
             {t === "groups" ? (
-              <>Fase de Grupos <span className="ml-1.5 text-xs text-gray-400">({groupsDone}/12 grupos · {thirdsDone}/8 3ºs)</span></>
+              <>Fase de Grupos <span className="ml-1.5 text-xs text-gray-400">({groupsDone}/12 grupos)</span></>
             ) : (
               <>Chaveamento <span className="ml-1.5 text-xs text-gray-400">({r32Done}/16 jogos)</span></>
             )}
@@ -535,106 +581,135 @@ export default function ClassificationPredictions({
       {/* ── TAB 1: Fase de Grupos ── */}
       {tab === "groups" && (
         <div className="space-y-6">
-          {/* Instruction */}
-          <p className="text-xs text-gray-500">
-            Clique nos times para classificar: <span className="font-medium text-yellow-600">1º</span>{" "}
-            → <span className="font-medium text-gray-500">2º</span>{" "}
-            → <span className="font-medium text-orange-500">3º</span> lugar em cada grupo.
-            Clique novamente para desmarcar.
-          </p>
+          {/* Info banner */}
+          <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-3 flex items-start gap-2">
+            <svg className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-xs text-gray-700 leading-relaxed">
+              As classificações abaixo são <strong>derivadas automaticamente</strong> dos seus palpites de placar
+              da fase de grupos. Para alterar, edite seus palpites em{" "}
+              <a href="/palpites/grupos" className="text-[#009C3B] font-medium underline">Palpites de Grupos</a>.
+              <br />
+              Critérios de desempate: <span className="font-medium">pontos → saldo de gols → gols pró → ordem alfabética</span>.
+            </div>
+          </div>
 
-          {/* Group cards grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {incompleteGroups.length > 0 && (
+            <div className="border border-amber-200 bg-amber-50 rounded-lg px-4 py-3 text-xs text-amber-800">
+              ⚠ Você ainda não preencheu todos os jogos dos grupos:{" "}
+              <strong>{incompleteGroups.join(", ")}</strong>. As classificações desses grupos podem estar incompletas.
+            </div>
+          )}
+
+          {/* Group standings tables */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {GROUPS.map((g) => {
-              const gp = groupPicks[g] ?? { first: null, second: null, third: null };
-              const grpTeams = teamsByGroup[g] ?? [];
+              const standings = standingsByGroup[g] ?? [];
               return (
-                <div key={g} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-[#006B2B]">Grupo {g}</span>
-                    {gp.first && gp.second && (
-                      <span className="text-[10px] text-green-600">✓</span>
-                    )}
+                <div key={g} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-[#006B2B] text-white px-3 py-1.5 text-xs font-bold flex items-center justify-between">
+                    <span>Grupo {g}</span>
+                    {incompleteGroups.includes(g) && <span className="text-amber-200 text-[10px]">incompleto</span>}
                   </div>
-                  <div className="space-y-1">
-                    {grpTeams.map((t) => {
-                      const pos = gp.first === t.id ? 1 : gp.second === t.id ? 2 : gp.third === t.id ? 3 : null;
-                      const posColors: Record<number | string, string> = {
-                        1: "bg-yellow-400 text-yellow-900 border-yellow-400",
-                        2: "bg-gray-300 text-gray-700 border-gray-300",
-                        3: "bg-orange-200 text-orange-800 border-orange-200",
-                      };
-                      return (
-                        <button
-                          key={t.id}
-                          title={t.name}
-                          disabled={isLocked}
-                          onClick={() => clickTeamInGroup(g, t.id)}
-                          className={`w-full flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors text-left ${
-                            pos
-                              ? posColors[pos]
-                              : "border-gray-200 bg-gray-50 hover:border-gray-400 text-gray-700"
-                          } disabled:opacity-60`}
-                        >
-                          {pos && (
-                            <span className="w-4 h-4 rounded-full bg-white/70 text-[9px] font-bold flex items-center justify-center shrink-0 text-gray-700">
-                              {pos}
-                            </span>
-                          )}
-                          <span className="font-medium">{t.code}</span>
-                          <span className="text-[10px] truncate opacity-70">{t.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <table className="w-full text-[11px]">
+                    <thead className="bg-gray-50 text-gray-500 text-[10px]">
+                      <tr>
+                        <th className="px-1.5 py-1 text-left font-medium">#</th>
+                        <th className="px-1.5 py-1 text-left font-medium">Time</th>
+                        <th className="px-1 py-1 text-center font-medium">P</th>
+                        <th className="px-1 py-1 text-center font-medium">J</th>
+                        <th className="px-1 py-1 text-center font-medium">SG</th>
+                        <th className="px-1 py-1 text-center font-medium">GP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {standings.map((s, i) => {
+                        const t = teamById.get(s.teamId);
+                        const isQualifiedThird = i === 2 && qualifiedThirds.has(s.teamId);
+                        const rowBg =
+                          i < 2
+                            ? "bg-green-50"
+                            : isQualifiedThird
+                              ? "bg-yellow-50"
+                              : "";
+                        const posBadge =
+                          i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 && isQualifiedThird ? "🥉" : "";
+                        return (
+                          <tr key={s.teamId} className={`border-t border-gray-100 ${rowBg}`}>
+                            <td className="px-1.5 py-1 text-gray-500">{i + 1}</td>
+                            <td className="px-1.5 py-1" title={t?.name}>
+                              <span className="font-medium">{t?.code}</span>
+                              {posBadge && <span className="ml-1">{posBadge}</span>}
+                            </td>
+                            <td className="px-1 py-1 text-center font-bold">{s.points}</td>
+                            <td className="px-1 py-1 text-center text-gray-500">{s.played}</td>
+                            <td className="px-1 py-1 text-center text-gray-500">
+                              {s.goalDiff > 0 ? `+${s.goalDiff}` : s.goalDiff}
+                            </td>
+                            <td className="px-1 py-1 text-center text-gray-500">{s.goalsFor}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               );
             })}
           </div>
 
-          {/* Best thirds */}
+          {/* Best thirds — read-only ranking */}
           <div className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-bold text-sm">Melhores 3ºs Classificados</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Selecione os 8 terceiros colocados que você acredita que avançarão.
+                  Os 8 melhores terceiros colocados (pelos seus palpites) avançam à Segunda Fase.
                 </p>
               </div>
-              <span className={`text-sm font-medium ${qualifiedThirds.size === 8 ? "text-[#009C3B]" : "text-gray-400"}`}>
-                {qualifiedThirds.size}/8
-              </span>
+              <span className="text-sm font-medium text-[#009C3B]">{qualifiedThirds.size}/8</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {GROUPS.map((g) => {
-                const t = thirdsByGroup[g];
-                if (!t) {
+              {(() => {
+                // Show all 12 thirds ranked
+                const thirds: { team: Team; standing: Standing; group: string }[] = [];
+                for (const g of GROUPS) {
+                  const s = standingsByGroup[g];
+                  if (s && s[2]) {
+                    const t = teamById.get(s[2].teamId);
+                    if (t) thirds.push({ team: t, standing: s[2], group: g });
+                  }
+                }
+                thirds.sort((a, b) => {
+                  if (b.standing.points !== a.standing.points) return b.standing.points - a.standing.points;
+                  if (b.standing.goalDiff !== a.standing.goalDiff) return b.standing.goalDiff - a.standing.goalDiff;
+                  if (b.standing.goalsFor !== a.standing.goalsFor) return b.standing.goalsFor - a.standing.goalsFor;
+                  return a.team.name.localeCompare(b.team.name);
+                });
+                return thirds.map((t, i) => {
+                  const advances = i < 8;
                   return (
-                    <div key={g} className="border border-dashed border-gray-200 rounded px-2 py-1.5 text-xs text-gray-300">
-                      Grupo {g} — ?
+                    <div
+                      key={t.team.id}
+                      title={t.team.name}
+                      className={`flex items-center gap-1.5 px-2 py-1.5 rounded border text-xs ${
+                        advances
+                          ? "bg-[#009C3B] text-white border-[#009C3B]"
+                          : "border-gray-200 text-gray-400 bg-gray-50"
+                      }`}
+                    >
+                      <span className={`text-[10px] shrink-0 ${advances ? "text-white/80" : "text-gray-300"}`}>
+                        Gr.{t.group}
+                      </span>
+                      <span className="font-medium">{t.team.code}</span>
+                      <span className={`truncate text-[10px] ${advances ? "opacity-90" : "opacity-70"}`}>
+                        {t.standing.points}pts
+                      </span>
+                      {!advances && <span className="text-[9px] ml-auto">×</span>}
                     </div>
                   );
-                }
-                const isSelected = qualifiedThirds.has(t.id);
-                const isFull = qualifiedThirds.size >= 8 && !isSelected;
-                return (
-                  <button
-                    key={g}
-                    title={t.name}
-                    disabled={isLocked || isFull}
-                    onClick={() => toggleQualifiedThird(t.id)}
-                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded border text-xs transition-colors text-left ${
-                      isSelected
-                        ? "bg-[#009C3B] text-white border-[#009C3B]"
-                        : "border-gray-200 hover:border-gray-400 text-gray-700"
-                    } disabled:opacity-40`}
-                  >
-                    <span className="text-[10px] text-gray-400 shrink-0">Gr.{g}</span>
-                    <span className="font-medium">{t.code}</span>
-                    <span className="truncate text-[10px] opacity-70">{t.name}</span>
-                  </button>
-                );
-              })}
+                });
+              })()}
             </div>
           </div>
 
