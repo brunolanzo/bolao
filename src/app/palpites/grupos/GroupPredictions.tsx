@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { calcMatchPoints } from "@/lib/scoring";
 
 interface Team {
   id: string;
@@ -232,6 +233,21 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
                     day: "2-digit",
                     month: "2-digit",
                   });
+                  const isFinished =
+                    match.status === "FINISHED" &&
+                    match.homeScore !== null &&
+                    match.awayScore !== null;
+                  const hasPred =
+                    pred && pred.homeScore !== null && pred.awayScore !== null;
+                  const points =
+                    isFinished && hasPred
+                      ? calcMatchPoints(
+                          pred!.homeScore as number,
+                          pred!.awayScore as number,
+                          match.homeScore as number,
+                          match.awayScore as number,
+                        )
+                      : null;
 
                   return (
                     <div
@@ -248,7 +264,7 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
                         max={20}
                         value={pred?.homeScore ?? ""}
                         onChange={(e) => updatePrediction(match.id, "homeScore", e.target.value)}
-                        disabled={isLocked}
+                        disabled={isLocked || isFinished}
                         className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100"
                       />
                       <span className="text-gray-400">x</span>
@@ -258,12 +274,35 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
                         max={20}
                         value={pred?.awayScore ?? ""}
                         onChange={(e) => updatePrediction(match.id, "awayScore", e.target.value)}
-                        disabled={isLocked}
+                        disabled={isLocked || isFinished}
                         className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100"
                       />
                       <span className="flex-1 truncate">
                         {match.awayTeam?.name || "TBD"}
                       </span>
+                      {/* Points / Aguardando badge */}
+                      {isFinished ? (
+                        <span
+                          className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${
+                            points === null
+                              ? "bg-gray-100 text-gray-400"
+                              : points === 0
+                                ? "bg-gray-100 text-gray-500"
+                                : points >= 7
+                                  ? "bg-green-600 text-white"
+                                  : points >= 4
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                          }`}
+                          title={`Resultado: ${match.homeScore} x ${match.awayScore}`}
+                        >
+                          {points !== null ? `${points} pt${points === 1 ? "" : "s"}` : "—"}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-[10px] text-gray-400 px-1.5 py-0.5 rounded bg-gray-50 whitespace-nowrap">
+                          Aguardando
+                        </span>
+                      )}
                     </div>
                   );
                 })}

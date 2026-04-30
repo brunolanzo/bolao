@@ -24,6 +24,23 @@ export default async function ClassificacaoPage() {
     select: { matchId: true, homeScore: true, awayScore: true },
   });
 
+  const phasePredictions = await prisma.phasePrediction.findMany({
+    where: { userId: session.user.id },
+    select: { teamId: true, phase: true, correct: true, points: true },
+  });
+
+  // Aggregate points earned per phase (where resolution has happened)
+  const phasePoints: Record<string, { earned: number; correct: number; resolved: number }> = {};
+  for (const pp of phasePredictions) {
+    if (!phasePoints[pp.phase]) phasePoints[pp.phase] = { earned: 0, correct: 0, resolved: 0 };
+    const slot = phasePoints[pp.phase];
+    if (pp.correct !== null) {
+      slot.resolved++;
+      if (pp.correct) slot.correct++;
+    }
+    if (pp.points !== null) slot.earned += pp.points;
+  }
+
   const predictionsMap: Record<string, { homeScore: number; awayScore: number }> = {};
   for (const p of matchPredictions) {
     predictionsMap[p.matchId] = { homeScore: p.homeScore, awayScore: p.awayScore };
@@ -59,6 +76,7 @@ export default async function ClassificacaoPage() {
         teams={JSON.parse(JSON.stringify(teams))}
         groupMatches={groupMatches}
         predictionsMap={predictionsMap}
+        phasePoints={phasePoints}
         initialBracketState={bracketState}
         isLocked={isLocked}
         deadline={deadline?.value || null}

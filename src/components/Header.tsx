@@ -35,6 +35,9 @@ export default function Header() {
               <Link href="/palpites/classificacao" className="hover:text-[#009C3B] transition-colors">
                 Palpites Mata-Mata
               </Link>
+              <Link href="/palpites/eliminatorias" className="hover:text-[#009C3B] transition-colors">
+                Palpites Segunda Fase
+              </Link>
               <Link href="/ranking" className="hover:text-[#009C3B] transition-colors">
                 Ranking
               </Link>
@@ -107,6 +110,9 @@ export default function Header() {
             </Link>
             <Link href="/palpites/classificacao" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Palpites Mata-Mata
+            </Link>
+            <Link href="/palpites/eliminatorias" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+              Palpites Segunda Fase
             </Link>
             <Link href="/ranking" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
               Ranking

@@ -50,10 +50,17 @@ interface Standing {
   points: number;
 }
 
+interface PhasePointsInfo {
+  earned: number;
+  correct: number;
+  resolved: number;
+}
+
 interface Props {
   teams: Team[];
   groupMatches: GroupMatch[];
   predictionsMap: Record<string, ScorePred>;
+  phasePoints: Record<string, PhasePointsInfo>;
   initialBracketState: Partial<BracketState> & {
     // tolerate legacy fields from previous saves; we ignore them
     groupPicks?: unknown;
@@ -184,6 +191,7 @@ export default function ClassificationPredictions({
   teams,
   groupMatches,
   predictionsMap,
+  phasePoints,
   initialBracketState,
   isLocked,
   deadline,
@@ -457,24 +465,68 @@ export default function ClassificationPredictions({
           })
       : [];
 
-    const btnBase = `px-2.5 py-1.5 rounded text-xs font-medium border transition-colors truncate max-w-[80px] ${small ? "text-[11px] px-2 py-1 max-w-[70px]" : ""}`;
-    const btnActive = "bg-[#009C3B] text-white border-[#009C3B]";
-    const btnIdle = "border-gray-300 bg-white hover:border-[#009C3B]";
+    const sizeClasses = small
+      ? "text-[11px] px-2 py-1.5"
+      : "text-xs px-2.5 py-2";
+    const btnActive = "bg-[#009C3B] text-white border-[#009C3B] shadow-sm";
+    const btnIdle = "border-gray-300 bg-white hover:border-[#009C3B] hover:bg-green-50 text-gray-800";
     const btnEmpty = "border-dashed border-gray-200 bg-gray-50 text-gray-300 cursor-default";
+    const btnLoser = "border-gray-200 bg-gray-50 text-gray-400 line-through";
+
+    function teamButton(
+      team: Team | null | undefined,
+      teamId: string | null,
+      slot: Slot,
+      otherId: string | null,
+    ) {
+      const isWinner = validWinner && validWinner === teamId;
+      const isLoser = validWinner && teamId && validWinner !== teamId;
+      if (!team) {
+        return (
+          <div className={`w-full rounded border ${sizeClasses} ${btnEmpty} text-center truncate`}>
+            {slotLabel(slot)}
+          </div>
+        );
+      }
+      return (
+        <button
+          title={team.name}
+          disabled={isLocked || !otherId}
+          onClick={() => pickWinner(match.id, teamId!)}
+          className={`w-full rounded border font-medium transition-colors truncate text-left flex items-center gap-1.5 ${sizeClasses} ${
+            isWinner ? btnActive : isLoser ? btnLoser : btnIdle
+          } disabled:opacity-50`}
+        >
+          <span className={`shrink-0 ${isWinner ? "text-white/70" : "text-gray-400"} text-[9px] font-bold`}>
+            {team.code}
+          </span>
+          <span className="truncate flex-1 text-[10px]">{team.name}</span>
+        </button>
+      );
+    }
 
     return (
-      <div className="border border-gray-200 rounded-lg p-2.5 bg-white text-xs space-y-2">
-        <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">{match.label}</div>
+      <div className="border border-gray-200 rounded-lg p-2 bg-white space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-wide">
+            {match.label}
+          </span>
+          {validWinner && (
+            <span className="text-[9px] text-[#009C3B]">✓</span>
+          )}
+        </div>
 
         {/* 3rd-place slot selector */}
         {thirdSlot && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-gray-400 shrink-0">3º ({thirdSlot.eligible.join("/")})</span>
+          <div>
+            <div className="text-[9px] text-gray-400 mb-0.5">
+              3º ({thirdSlot.eligible.join("/")})
+            </div>
             <select
               value={thirdSlots[match.id] ?? ""}
               onChange={(e) => assignThirdSlot(match.id, e.target.value)}
               disabled={isLocked}
-              className="flex-1 text-[11px] border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:opacity-50 disabled:bg-gray-100"
+              className="w-full text-[10px] border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:opacity-50 disabled:bg-gray-100"
             >
               <option value="">— selecione —</option>
               {eligibleThirds.map((t) => (
@@ -490,46 +542,11 @@ export default function ClassificationPredictions({
           </div>
         )}
 
-        {/* Match buttons */}
-        <div className="flex items-center gap-1.5">
-          {teamA ? (
-            <button
-              title={teamA.name}
-              disabled={isLocked || !idB}
-              onClick={() => pickWinner(match.id, idA!)}
-              className={`${btnBase} ${validWinner === idA ? btnActive : btnIdle} flex-1`}
-            >
-              {teamA.code}
-            </button>
-          ) : (
-            <div className={`${btnBase} ${btnEmpty} flex-1 text-center`}>
-              {slotLabel(match.slotA)}
-            </div>
-          )}
-
-          <span className="text-gray-300 shrink-0 text-[10px]">×</span>
-
-          {teamB ? (
-            <button
-              title={teamB.name}
-              disabled={isLocked || !idA}
-              onClick={() => pickWinner(match.id, idB!)}
-              className={`${btnBase} ${validWinner === idB ? btnActive : btnIdle} flex-1`}
-            >
-              {teamB.code}
-            </button>
-          ) : (
-            <div className={`${btnBase} ${btnEmpty} flex-1 text-center`}>
-              {slotLabel(match.slotB)}
-            </div>
-          )}
+        {/* Stacked team buttons (vertical bracket layout) */}
+        <div className="space-y-1">
+          {teamButton(teamA, idA, match.slotA, idB)}
+          {teamButton(teamB, idB, match.slotB, idA)}
         </div>
-
-        {validWinner && (
-          <div className="text-[10px] text-[#009C3B]">
-            ✓ {teamById.get(validWinner)?.name}
-          </div>
-        )}
       </div>
     );
   }
@@ -732,95 +749,183 @@ export default function ClassificationPredictions({
             Nos jogos com slot de <strong>3º lugar</strong>, selecione qual classificado ocupa aquela vaga.
           </p>
 
-          {/* 16avos de Final */}
-          <section>
-            <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#FFDF00] text-[#004D20] text-[10px] flex items-center justify-center font-bold">16</span>
-              16avos de Final (Segunda Fase)
-            </h2>
-            {/* Show in pairs that feed into the same R16 match */}
-            {[
-              [R32[1], R32[4]],  // M74 + M77 → M89
-              [R32[0], R32[2]],  // M73 + M75 → M90
-              [R32[3], R32[5]],  // M76 + M78 → M91
-              [R32[6], R32[7]],  // M79 + M80 → M92
-              [R32[10], R32[11]], // M83 + M84 → M93
-              [R32[8], R32[9]],   // M81 + M82 → M94
-              [R32[13], R32[15]], // M86 + M88 → M95
-              [R32[12], R32[14]], // M85 + M87 → M96
-            ].map(([mA, mB], i) => (
-              <div key={i} className="mb-3">
-                <div className="text-[10px] text-gray-400 mb-1.5 pl-1">
-                  Vencedores disputam: {R16[i].label}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <MatchCard match={mA} />
-                  <MatchCard match={mB} />
-                </div>
+          {(() => {
+            const totalEarned = Object.values(phasePoints).reduce((a, p) => a + p.earned, 0);
+            const totalCorrect = Object.values(phasePoints).reduce((a, p) => a + p.correct, 0);
+            const totalResolved = Object.values(phasePoints).reduce((a, p) => a + p.resolved, 0);
+            if (totalResolved === 0) return null;
+            return (
+              <div className="border border-yellow-200 bg-yellow-50 rounded-lg px-4 py-2.5 text-sm flex items-center justify-between">
+                <span className="text-gray-700">Pontuação acumulada nos classificados:</span>
+                <span className="font-bold text-[#006B2B]">
+                  {totalEarned} pts <span className="text-xs text-gray-500 font-normal">({totalCorrect}/{totalResolved} acertos)</span>
+                </span>
               </div>
-            ))}
-          </section>
+            );
+          })()}
 
-          {/* Oitavas de Final */}
-          <section>
-            <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#FFDF00] text-[#004D20] text-[10px] flex items-center justify-center font-bold">8</span>
-              Oitavas de Final
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {R16.map((m) => <MatchCard key={m.id} match={m} />)}
+          {/* ── DESKTOP: visual bracket grid (md+) ── */}
+          <div className="hidden md:block overflow-x-auto pb-4">
+            <div
+              className="grid gap-x-6 min-w-[1100px]"
+              style={{
+                gridTemplateColumns: "200px 175px 175px 175px 200px",
+                gridTemplateRows: "repeat(16, minmax(95px, auto))",
+              }}
+            >
+              {/* Round headers */}
+              {([
+                { col: 1, label: "16avos (Segunda Fase)", phase: "ROUND_32" },
+                { col: 2, label: "Oitavas", phase: "ROUND_16" },
+                { col: 3, label: "Quartas", phase: "QUARTERS" },
+                { col: 4, label: "Semis", phase: "SEMIS" },
+                { col: 5, label: "Final", phase: "FINAL" },
+              ] as const).map((h) => {
+                const info = phasePoints[h.phase];
+                const showPts = info && info.resolved > 0;
+                return (
+                  <div
+                    key={h.col}
+                    style={{ gridColumn: h.col, gridRow: "1 / span 1", alignSelf: "start" }}
+                    className="text-[11px] font-bold text-[#006B2B] border-b-2 border-[#FFDF00] pb-1.5 mb-1 flex items-center justify-between"
+                  >
+                    <span>{h.label}</span>
+                    {showPts && (
+                      <span className="text-[9px] bg-[#009C3B] text-white px-1.5 py-0.5 rounded-full font-bold">
+                        +{info.earned}pts
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* R32 — reordered for visual bracket alignment */}
+              {[1, 4, 0, 2, 3, 5, 6, 7, 10, 11, 8, 9, 13, 15, 12, 14].map((idx, i) => (
+                <div
+                  key={R32[idx].id}
+                  style={{ gridColumn: 1, gridRow: i + 2, alignSelf: "center" }}
+                >
+                  <MatchCard match={R32[idx]} />
+                </div>
+              ))}
+
+              {/* R16 — each spans 2 rows, vertically centered between feeders */}
+              {R16.map((m, i) => (
+                <div
+                  key={m.id}
+                  style={{
+                    gridColumn: 2,
+                    gridRow: `${i * 2 + 2} / span 2`,
+                    alignSelf: "center",
+                  }}
+                >
+                  <MatchCard match={m} />
+                </div>
+              ))}
+
+              {/* QF — each spans 4 rows */}
+              {QF.map((m, i) => (
+                <div
+                  key={m.id}
+                  style={{
+                    gridColumn: 3,
+                    gridRow: `${i * 4 + 2} / span 4`,
+                    alignSelf: "center",
+                  }}
+                >
+                  <MatchCard match={m} />
+                </div>
+              ))}
+
+              {/* SF — each spans 8 rows */}
+              {SF.map((m, i) => (
+                <div
+                  key={m.id}
+                  style={{
+                    gridColumn: 4,
+                    gridRow: `${i * 8 + 2} / span 8`,
+                    alignSelf: "center",
+                  }}
+                >
+                  <MatchCard match={m} />
+                </div>
+              ))}
+
+              {/* Final — full height of bracket */}
+              <div
+                style={{ gridColumn: 5, gridRow: "2 / span 16", alignSelf: "center" }}
+                className="border-2 border-[#FFDF00] rounded-lg p-1 bg-yellow-50/30"
+              >
+                <MatchCard match={FIN} />
+              </div>
             </div>
-          </section>
 
-          {/* Quartas de Final */}
-          <section>
-            <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#FFDF00] text-[#004D20] text-[10px] flex items-center justify-center font-bold">4</span>
-              Quartas de Final
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              {QF.map((m) => <MatchCard key={m.id} match={m} />)}
-            </div>
-          </section>
-
-          {/* Semifinais */}
-          <section>
-            <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#FFDF00] text-[#004D20] text-[10px] flex items-center justify-center font-bold">2</span>
-              Semifinais
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              {SF.map((m) => <MatchCard key={m.id} match={m} />)}
-            </div>
-          </section>
-
-          {/* Final e 3º lugar */}
-          <section>
-            <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <span className="text-base">🏆</span> Final e 3º Lugar
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              <MatchCard match={FIN} />
+            {/* 3rd place match below the main bracket */}
+            <div className="mt-6 max-w-[220px] mx-auto">
+              <div className="text-[11px] text-center text-gray-500 mb-1.5 font-medium">
+                🥉 Disputa de 3º Lugar
+              </div>
               <MatchCard match={THIRD_PLACE} />
             </div>
-            {bracketPicks["FIN"] && (() => {
-              const champ = bracketPicks["FIN"]!;
-              const finA = resolve(FIN.slotA, FIN.id);
-              const finB = resolve(FIN.slotB, FIN.id);
-              const runnerUp = champ === finA ? finB : champ === finB ? finA : null;
+          </div>
+
+          {/* ── MOBILE: vertical sectioned view ── */}
+          <div className="md:hidden space-y-5">
+            {([
+              { phase: "ROUND_32", label: "16avos (Segunda Fase)", count: 16, matches: R32 },
+              { phase: "ROUND_16", label: "Oitavas de Final", count: 8, matches: R16 },
+              { phase: "QUARTERS", label: "Quartas de Final", count: 4, matches: QF },
+              { phase: "SEMIS", label: "Semifinais", count: 2, matches: SF },
+              { phase: "FINAL", label: "Final", count: 1, matches: [FIN] },
+            ] as const).map((sec) => {
+              const info = phasePoints[sec.phase];
+              const showPts = info && info.resolved > 0;
               return (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-center">
-                  🏆 Campeão: <strong>{teamById.get(champ)?.name}</strong>
-                  {runnerUp && (
-                    <> · 🥈 Vice: <strong>{teamById.get(runnerUp)?.name}</strong></>
-                  )}
-                  {bracketPicks["3P"] && (
-                    <> · 🥉 3º: <strong>{teamById.get(bracketPicks["3P"]!)?.name}</strong></>
-                  )}
-                </div>
+                <section key={sec.phase}>
+                  <h2 className="text-sm font-bold mb-2 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[#FFDF00] text-[#004D20] text-[10px] flex items-center justify-center font-bold">
+                      {sec.count}
+                    </span>
+                    {sec.label}
+                    {showPts && (
+                      <span className="ml-auto text-[10px] bg-[#009C3B] text-white px-2 py-0.5 rounded-full font-bold">
+                        +{info.earned} pts ({info.correct}/{info.resolved})
+                      </span>
+                    )}
+                  </h2>
+                  <div className={`grid gap-2 ${sec.matches.length >= 8 ? "grid-cols-2" : sec.matches.length >= 4 ? "grid-cols-2" : "grid-cols-2"}`}>
+                    {sec.matches.map((m) => <MatchCard key={m.id} match={m} />)}
+                  </div>
+                </section>
               );
-            })()}
-          </section>
+            })}
+
+            <section>
+              <h2 className="text-sm font-bold mb-2 flex items-center gap-2">
+                <span className="text-base">🥉</span> Disputa de 3º Lugar
+              </h2>
+              <MatchCard match={THIRD_PLACE} />
+            </section>
+          </div>
+
+          {/* Champion summary */}
+          {bracketPicks["FIN"] && (() => {
+            const champ = bracketPicks["FIN"]!;
+            const finA = resolve(FIN.slotA, FIN.id);
+            const finB = resolve(FIN.slotB, FIN.id);
+            const runnerUp = champ === finA ? finB : champ === finB ? finA : null;
+            return (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-center">
+                🏆 Campeão: <strong>{teamById.get(champ)?.name}</strong>
+                {runnerUp && (
+                  <> · 🥈 Vice: <strong>{teamById.get(runnerUp)?.name}</strong></>
+                )}
+                {bracketPicks["3P"] && (
+                  <> · 🥉 3º: <strong>{teamById.get(bracketPicks["3P"]!)?.name}</strong></>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
