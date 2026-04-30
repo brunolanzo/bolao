@@ -4,6 +4,13 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calcMatchPoints } from "@/lib/scoring";
 
+interface ResultUpdate {
+  matchId: string;
+  homeScore: number;
+  awayScore: number;
+  status: string;
+}
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "admin") {
@@ -11,49 +18,56 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { matchId, homeScore, awayScore, status } = (await request.json()) as {
-      matchId: string;
-      homeScore: number;
-      awayScore: number;
-      status: string;
-    };
+    const body = await request.json();
+    const updates: ResultUpdate[] = body.updates
+      ? body.updates
+      : [body as ResultUpdate];
 
-    // Update match result
-    await prisma.match.update({
-      where: { id: matchId },
-      data: {
-        homeScore,
-        awayScore,
-        status: status || "LIVE",
-      },
-    });
+    let count = 0;
+    for (const u of updates) {
+      if (
+        !u.matchId ||
+        typeof u.homeScore !== "number" ||
+        typeof u.awayScore !== "number"
+      ) {
+        continue;
+      }
 
-    // If match is finished, calculate points for all predictions
-    if (status === "FINISHED") {
-      const predictions = await prisma.matchPrediction.findMany({
-        where: { matchId },
+      await prisma.match.update({
+        where: { id: u.matchId },
+        data: {
+          homeScore: u.homeScore,
+          awayScore: u.awayScore,
+          status: u.status || "LIVE",
+        },
       });
 
-      for (const pred of predictions) {
-        const points = calcMatchPoints(
-          pred.homeScore,
-          pred.awayScore,
-          homeScore,
-          awayScore
-        );
-
-        await prisma.matchPrediction.update({
-          where: { id: pred.id },
-          data: { points },
+      // Calculate points for predictions if FINISHED
+      if (u.status === "FINISHED") {
+        const predictions = await prisma.matchPrediction.findMany({
+          where: { matchId: u.matchId },
         });
+        for (const pred of predictions) {
+          const points = calcMatchPoints(
+            pred.homeScore,
+            pred.awayScore,
+            u.homeScore,
+            u.awayScore,
+          );
+          await prisma.matchPrediction.update({
+            where: { id: pred.id },
+            data: { points },
+          });
+        }
       }
+      count++;
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, count });
   } catch {
     return NextResponse.json(
-      { error: "Erro ao atualizar resultado" },
-      { status: 500 }
+      { error: "Erro ao atualizar resultados" },
+      { status: 500 },
     );
   }
 }
