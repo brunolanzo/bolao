@@ -23,19 +23,25 @@ CREATE TABLE IF NOT EXISTS "Team" (
 );
 
 CREATE TABLE IF NOT EXISTS "Match" (
-  id          TEXT PRIMARY KEY,
-  phase       TEXT NOT NULL,
-  groupLabel  TEXT,
-  matchOrder  INTEGER NOT NULL,
-  homeTeamId  TEXT,
-  awayTeamId  TEXT,
-  homeScore   INTEGER,
-  awayScore   INTEGER,
-  matchDate   TEXT NOT NULL,
-  status      TEXT NOT NULL DEFAULT 'SCHEDULED',
+  id            TEXT PRIMARY KEY,
+  phase         TEXT NOT NULL,
+  groupLabel    TEXT,
+  matchOrder    INTEGER NOT NULL,
+  homeTeamId    TEXT,
+  awayTeamId    TEXT,
+  homeScore     INTEGER,
+  awayScore     INTEGER,
+  homePenalties INTEGER,
+  awayPenalties INTEGER,
+  matchDate     TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'SCHEDULED',
   FOREIGN KEY (homeTeamId) REFERENCES "Team"(id),
   FOREIGN KEY (awayTeamId) REFERENCES "Team"(id)
 );
+
+-- Migration for existing DBs: when upgrading from a pre-penalty schema, run:
+--   ALTER TABLE "Match" ADD COLUMN homePenalties INTEGER;
+--   ALTER TABLE "Match" ADD COLUMN awayPenalties INTEGER;
 
 CREATE TABLE IF NOT EXISTS "MatchPrediction" (
   id        TEXT PRIMARY KEY,

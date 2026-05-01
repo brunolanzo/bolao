@@ -10,6 +10,8 @@ interface ResultUpdate {
   homeScore: number;
   awayScore: number;
   status: string;
+  homePenalties?: number | null;
+  awayPenalties?: number | null;
 }
 
 export async function POST(request: Request) {
@@ -40,6 +42,8 @@ export async function POST(request: Request) {
           homeScore: u.homeScore,
           awayScore: u.awayScore,
           status: u.status || "LIVE",
+          homePenalties: u.homePenalties ?? null,
+          awayPenalties: u.awayPenalties ?? null,
         },
       });
 

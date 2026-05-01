@@ -75,8 +75,10 @@ model Match {
   homeTeam   Team?   @relation("HomeTeam", fields: [homeTeamId], references: [id])
   awayTeam   Team?   @relation("AwayTeam", fields: [awayTeamId], references: [id])
 
-  homeScore  Int?    // actual score, set by admin
-  awayScore  Int?    // actual score, set by admin
+  homeScore  Int?    // actual score (90' + extra time), set by admin
+  awayScore  Int?    // actual score (90' + extra time), set by admin
+  homePenalties Int? // penalty shootout score (only when tied at end of extra time)
+  awayPenalties Int? // penalty shootout score (only when tied at end of extra time)
 
   matchDate  DateTime
   status     String   @default("SCHEDULED") // SCHEDULED, LIVE, FINISHED

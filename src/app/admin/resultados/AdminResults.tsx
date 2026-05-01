@@ -20,6 +20,8 @@ interface Match {
   awayTeam: Team | null;
   homeScore: number | null;
   awayScore: number | null;
+  homePenalties: number | null;
+  awayPenalties: number | null;
   matchDate: string;
   status: string;
 }
@@ -55,6 +57,8 @@ interface ScoreState {
   home: string;
   away: string;
   status: string;
+  homePen: string;
+  awayPen: string;
 }
 
 function computeStandings(
@@ -119,6 +123,8 @@ export default function AdminResults({ matches }: Props) {
         home: m.homeScore !== null ? String(m.homeScore) : "",
         away: m.awayScore !== null ? String(m.awayScore) : "",
         status: m.status,
+        homePen: m.homePenalties !== null ? String(m.homePenalties) : "",
+        awayPen: m.awayPenalties !== null ? String(m.awayPenalties) : "",
       };
     }
     return init;
@@ -131,7 +137,7 @@ export default function AdminResults({ matches }: Props) {
 
   function update(matchId: string, field: keyof ScoreState, value: string) {
     setScores((prev) => {
-      const cur = prev[matchId] ?? { home: "", away: "", status: "SCHEDULED" };
+      const cur = prev[matchId] ?? { home: "", away: "", status: "SCHEDULED", homePen: "", awayPen: "" };
       if (cur[field] === value) return prev;
       return { ...prev, [matchId]: { ...cur, [field]: value } };
     });
@@ -153,7 +159,16 @@ export default function AdminResults({ matches }: Props) {
         const s = scores[id];
         const h = parseInt(s.home, 10);
         const a = parseInt(s.away, 10);
-        return { matchId: id, homeScore: h, awayScore: a, status: s.status };
+        const hp = s.homePen !== "" ? parseInt(s.homePen, 10) : null;
+        const ap = s.awayPen !== "" ? parseInt(s.awayPen, 10) : null;
+        return {
+          matchId: id,
+          homeScore: h,
+          awayScore: a,
+          status: s.status,
+          homePenalties: hp !== null && !isNaN(hp) ? hp : null,
+          awayPenalties: ap !== null && !isNaN(ap) ? ap : null,
+        };
       })
       .filter((u) => !isNaN(u.homeScore) && !isNaN(u.awayScore));
 
@@ -248,12 +263,25 @@ export default function AdminResults({ matches }: Props) {
   // ─── Match card (compact, shared) ─────────────────────────────────────────
 
   function MatchCard({ match }: { match: Match }) {
-    const s = scores[match.id] ?? { home: "", away: "", status: "SCHEDULED" };
+    const s = scores[match.id] ?? { home: "", away: "", status: "SCHEDULED", homePen: "", awayPen: "" };
     const isDirty = dirty.has(match.id);
     const isFinished = s.status === "FINISHED";
     const dateStr = new Date(match.matchDate).toLocaleDateString("pt-BR", {
       day: "2-digit", month: "2-digit",
     });
+
+    // Penalty inputs are only relevant for knockout matches that ended tied
+    const isKnockout = match.phase !== "GROUP";
+    const hScore = parseInt(s.home, 10);
+    const aScore = parseInt(s.away, 10);
+    const isTied = !isNaN(hScore) && !isNaN(aScore) && hScore === aScore;
+    const showPenalties = isKnockout && isTied;
+    const hPen = parseInt(s.homePen, 10);
+    const aPen = parseInt(s.awayPen, 10);
+    const penaltyWinner =
+      !isNaN(hPen) && !isNaN(aPen)
+        ? hPen > aPen ? "home" : aPen > hPen ? "away" : null
+        : null;
 
     return (
       <div
@@ -302,6 +330,46 @@ export default function AdminResults({ matches }: Props) {
             className="w-9 h-7 text-center border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-black"
           />
         </div>
+
+        {/* Penalty inputs (knockout phase + tied score) */}
+        {showPenalties && (
+          <div className="border-t border-yellow-200 pt-1.5 mt-1 bg-yellow-50/50 -mx-2 px-2 pb-1.5 -mb-1.5">
+            <div className="text-[9px] text-amber-700 font-semibold uppercase tracking-wide mb-1">
+              Pênaltis (não conta na pontuação)
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="flex-1 truncate text-[10px] text-gray-600" title={match.homeTeam?.name}>
+                {match.homeTeam?.code ?? "?"}
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={20}
+                value={s.homePen}
+                onChange={(e) => update(match.id, "homePen", e.target.value)}
+                className="w-9 h-6 text-center border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="flex-1 truncate text-[10px] text-gray-600" title={match.awayTeam?.name}>
+                {match.awayTeam?.code ?? "?"}
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={20}
+                value={s.awayPen}
+                onChange={(e) => update(match.id, "awayPen", e.target.value)}
+                className="w-9 h-6 text-center border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+            {penaltyWinner && (
+              <div className="text-[9px] text-amber-700 mt-1">
+                ✓ {penaltyWinner === "home" ? match.homeTeam?.name : match.awayTeam?.name} avança
+              </div>
+            )}
+          </div>
+        )}
 
         <select
           value={s.status}

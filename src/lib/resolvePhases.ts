@@ -8,6 +8,112 @@ import {
 
 const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
 
+// ─── Bracket cascade configuration ────────────────────────────────────────────
+// Maps each knockout target match to which previous-phase matches feed it.
+// Indexes refer to phase-relative position (0-based, by matchOrder asc).
+type FeederKind = "winner" | "loser";
+interface Feeder { from: string; idx: number; kind?: FeederKind }
+interface CascadeEntry { home: Feeder; away: Feeder }
+
+const CASCADE: { phase: string; entries: CascadeEntry[] }[] = [
+  { phase: "ROUND_16", entries: [
+    { home: { from: "ROUND_32", idx: 1  }, away: { from: "ROUND_32", idx: 4  } }, // M89
+    { home: { from: "ROUND_32", idx: 0  }, away: { from: "ROUND_32", idx: 2  } }, // M90
+    { home: { from: "ROUND_32", idx: 3  }, away: { from: "ROUND_32", idx: 5  } }, // M91
+    { home: { from: "ROUND_32", idx: 6  }, away: { from: "ROUND_32", idx: 7  } }, // M92
+    { home: { from: "ROUND_32", idx: 10 }, away: { from: "ROUND_32", idx: 11 } }, // M93
+    { home: { from: "ROUND_32", idx: 8  }, away: { from: "ROUND_32", idx: 9  } }, // M94
+    { home: { from: "ROUND_32", idx: 13 }, away: { from: "ROUND_32", idx: 15 } }, // M95
+    { home: { from: "ROUND_32", idx: 12 }, away: { from: "ROUND_32", idx: 14 } }, // M96
+  ]},
+  { phase: "QUARTERS", entries: [
+    { home: { from: "ROUND_16", idx: 0 }, away: { from: "ROUND_16", idx: 1 } },
+    { home: { from: "ROUND_16", idx: 2 }, away: { from: "ROUND_16", idx: 3 } },
+    { home: { from: "ROUND_16", idx: 4 }, away: { from: "ROUND_16", idx: 5 } },
+    { home: { from: "ROUND_16", idx: 6 }, away: { from: "ROUND_16", idx: 7 } },
+  ]},
+  { phase: "SEMIS", entries: [
+    { home: { from: "QUARTERS", idx: 0 }, away: { from: "QUARTERS", idx: 1 } },
+    { home: { from: "QUARTERS", idx: 2 }, away: { from: "QUARTERS", idx: 3 } },
+  ]},
+  { phase: "FINAL", entries: [
+    { home: { from: "SEMIS", idx: 0, kind: "winner" }, away: { from: "SEMIS", idx: 1, kind: "winner" } },
+  ]},
+  { phase: "THIRD_PLACE", entries: [
+    { home: { from: "SEMIS", idx: 0, kind: "loser" }, away: { from: "SEMIS", idx: 1, kind: "loser" } },
+  ]},
+];
+
+interface MatchLite {
+  id: string;
+  phase: string;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  homePenalties: number | null;
+  awayPenalties: number | null;
+  status: string;
+}
+
+/** Determine winner of a match. Uses penalties when scores are tied. Returns null if undecided. */
+function getWinner(m: MatchLite): string | null {
+  if (m.status !== "FINISHED") return null;
+  if (m.homeScore === null || m.awayScore === null) return null;
+  if (!m.homeTeamId || !m.awayTeamId) return null;
+  if (m.homeScore > m.awayScore) return m.homeTeamId;
+  if (m.awayScore > m.homeScore) return m.awayTeamId;
+  // Tied — use penalties
+  if (m.homePenalties !== null && m.awayPenalties !== null) {
+    if (m.homePenalties > m.awayPenalties) return m.homeTeamId;
+    if (m.awayPenalties > m.homePenalties) return m.awayTeamId;
+  }
+  return null;
+}
+
+function getLoser(m: MatchLite): string | null {
+  const winner = getWinner(m);
+  if (!winner) return null;
+  return winner === m.homeTeamId ? m.awayTeamId : m.homeTeamId;
+}
+
+/**
+ * Propagate winners (and losers, for the third-place playoff) from each
+ * knockout phase into the homeTeamId / awayTeamId of the next phase's matches.
+ * Idempotent: re-runs safely after every save.
+ */
+export async function cascadeBracket() {
+  const matches = await prisma.match.findMany({ orderBy: { matchOrder: "asc" } });
+  const byPhase: Record<string, typeof matches> = {};
+  for (const m of matches) {
+    if (!byPhase[m.phase]) byPhase[m.phase] = [];
+    byPhase[m.phase].push(m);
+  }
+
+  for (const c of CASCADE) {
+    const targets = byPhase[c.phase] ?? [];
+    if (targets.length !== c.entries.length) continue;
+    for (let i = 0; i < c.entries.length; i++) {
+      const t = targets[i];
+      const e = c.entries[i];
+      const sourceA = byPhase[e.home.from]?.[e.home.idx];
+      const sourceB = byPhase[e.away.from]?.[e.away.idx];
+      const homeId = sourceA
+        ? (e.home.kind === "loser" ? getLoser(sourceA) : getWinner(sourceA))
+        : null;
+      const awayId = sourceB
+        ? (e.away.kind === "loser" ? getLoser(sourceB) : getWinner(sourceB))
+        : null;
+      if (t.homeTeamId !== homeId || t.awayTeamId !== awayId) {
+        await prisma.match.update({
+          where: { id: t.id },
+          data: { homeTeamId: homeId, awayTeamId: awayId },
+        });
+      }
+    }
+  }
+}
+
 interface Standing {
   teamId: string;
   group: string;
@@ -37,6 +143,10 @@ function compareStanding(a: Standing, b: Standing) {
  * Also resolves ChampionPrediction (champion, runner-up, third).
  */
 export async function resolvePhases() {
+  // First propagate winners through the bracket so subsequent matches
+  // have the correct homeTeamId/awayTeamId before we evaluate predictions.
+  await cascadeBracket();
+
   const matches = await prisma.match.findMany();
   const teams = await prisma.team.findMany();
 
@@ -99,19 +209,16 @@ export async function resolvePhases() {
     for (const t of allThirds.slice(0, 8)) qualifiers.ROUND_32.add(t.teamId);
   }
 
-  // For knockout phases, winners of FINISHED matches in previous phase advance
+  // For knockout phases, winners of FINISHED matches in previous phase advance.
+  // getWinner uses penalties to break ties when needed.
   for (const m of matches) {
-    if (m.status !== "FINISHED" || m.homeScore === null || m.awayScore === null) continue;
-    if (!m.homeTeamId || !m.awayTeamId) continue;
     let nextPhase: string | null = null;
     if (m.phase === "ROUND_32") nextPhase = "ROUND_16";
     else if (m.phase === "ROUND_16") nextPhase = "QUARTERS";
     else if (m.phase === "QUARTERS") nextPhase = "SEMIS";
     else if (m.phase === "SEMIS") nextPhase = "FINAL";
     if (!nextPhase) continue;
-    let winner: string | null = null;
-    if (m.homeScore > m.awayScore) winner = m.homeTeamId;
-    else if (m.homeScore < m.awayScore) winner = m.awayTeamId;
+    const winner = getWinner(m);
     if (winner) qualifiers[nextPhase].add(winner);
   }
 
@@ -164,27 +271,17 @@ export async function resolvePhases() {
   let actualRunnerUp: string | null = null;
   let actualThird: string | null = null;
 
-  if (
-    finalMatch && finalMatch.status === "FINISHED" &&
-    finalMatch.homeScore !== null && finalMatch.awayScore !== null &&
-    finalMatch.homeTeamId && finalMatch.awayTeamId
-  ) {
-    if (finalMatch.homeScore > finalMatch.awayScore) {
-      actualChamp = finalMatch.homeTeamId;
-      actualRunnerUp = finalMatch.awayTeamId;
-    } else if (finalMatch.awayScore > finalMatch.homeScore) {
-      actualChamp = finalMatch.awayTeamId;
-      actualRunnerUp = finalMatch.homeTeamId;
+  if (finalMatch) {
+    actualChamp = getWinner(finalMatch);
+    if (actualChamp) {
+      actualRunnerUp = actualChamp === finalMatch.homeTeamId
+        ? finalMatch.awayTeamId
+        : finalMatch.homeTeamId;
     }
   }
 
-  if (
-    thirdPlaceMatch && thirdPlaceMatch.status === "FINISHED" &&
-    thirdPlaceMatch.homeScore !== null && thirdPlaceMatch.awayScore !== null &&
-    thirdPlaceMatch.homeTeamId && thirdPlaceMatch.awayTeamId
-  ) {
-    if (thirdPlaceMatch.homeScore > thirdPlaceMatch.awayScore) actualThird = thirdPlaceMatch.homeTeamId;
-    else if (thirdPlaceMatch.awayScore > thirdPlaceMatch.homeScore) actualThird = thirdPlaceMatch.awayTeamId;
+  if (thirdPlaceMatch) {
+    actualThird = getWinner(thirdPlaceMatch);
   }
 
   const cps = await prisma.championPrediction.findMany();
