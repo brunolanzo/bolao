@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { resolvePhases } from "@/lib/resolvePhases";
 
 const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
 
@@ -194,6 +195,10 @@ export async function POST() {
         updated++;
       }
     }
+
+    // Now that ROUND_32 teams are set, resolve PhasePredictions for ROUND_32
+    // (and any later phases that may already have FINISHED matches).
+    await resolvePhases();
 
     return NextResponse.json({ success: true, updated, qualifyingThirds: qualifyingThirds.map((t) => t.teamId) });
   } catch (e) {

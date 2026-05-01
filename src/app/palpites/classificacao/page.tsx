@@ -31,6 +31,8 @@ export default async function ClassificacaoPage() {
 
   // Aggregate points earned per phase (where resolution has happened)
   const phasePoints: Record<string, { earned: number; correct: number; resolved: number }> = {};
+  // Per-team-per-phase resolution: teamId → phase → { correct, points }
+  const teamPhaseResults: Record<string, Record<string, { correct: boolean | null; points: number | null }>> = {};
   for (const pp of phasePredictions) {
     if (!phasePoints[pp.phase]) phasePoints[pp.phase] = { earned: 0, correct: 0, resolved: 0 };
     const slot = phasePoints[pp.phase];
@@ -39,6 +41,8 @@ export default async function ClassificacaoPage() {
       if (pp.correct) slot.correct++;
     }
     if (pp.points !== null) slot.earned += pp.points;
+    if (!teamPhaseResults[pp.teamId]) teamPhaseResults[pp.teamId] = {};
+    teamPhaseResults[pp.teamId][pp.phase] = { correct: pp.correct, points: pp.points };
   }
 
   const predictionsMap: Record<string, { homeScore: number; awayScore: number }> = {};
@@ -77,6 +81,7 @@ export default async function ClassificacaoPage() {
         groupMatches={groupMatches}
         predictionsMap={predictionsMap}
         phasePoints={phasePoints}
+        teamPhaseResults={teamPhaseResults}
         initialBracketState={bracketState}
         isLocked={isLocked}
         deadline={deadline?.value || null}

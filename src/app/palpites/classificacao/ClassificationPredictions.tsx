@@ -56,11 +56,17 @@ interface PhasePointsInfo {
   resolved: number;
 }
 
+interface TeamPhaseResult {
+  correct: boolean | null;
+  points: number | null;
+}
+
 interface Props {
   teams: Team[];
   groupMatches: GroupMatch[];
   predictionsMap: Record<string, ScorePred>;
   phasePoints: Record<string, PhasePointsInfo>;
+  teamPhaseResults: Record<string, Record<string, TeamPhaseResult>>;
   initialBracketState: Partial<BracketState> & {
     // tolerate legacy fields from previous saves; we ignore them
     groupPicks?: unknown;
@@ -192,6 +198,7 @@ export default function ClassificationPredictions({
   groupMatches,
   predictionsMap,
   phasePoints,
+  teamPhaseResults,
   initialBracketState,
   isLocked,
   deadline,
@@ -436,6 +443,39 @@ export default function ClassificationPredictions({
   const groupsDone = GROUPS.filter((g) => !incompleteGroups.includes(g)).length;
   const r32Done = R32.filter((m) => bracketPicks[m.id]).length;
 
+  // Helper: badge showing the resolution result for a (team, phase) prediction
+  function teamPhaseBadge(teamId: string | null | undefined, phase: string, compact = false) {
+    if (!teamId) return null;
+    const r = teamPhaseResults[teamId]?.[phase];
+    if (!r || r.correct === null) return null;
+    if (r.correct) {
+      return (
+        <span
+          title={`Acertou! +${r.points ?? 0} pts`}
+          className={`shrink-0 inline-flex items-center font-bold rounded ${
+            compact
+              ? "text-[8px] px-1 py-px bg-yellow-300 text-[#004D20]"
+              : "text-[9px] px-1.5 py-0.5 bg-[#FFDF00] text-[#004D20]"
+          }`}
+        >
+          ✓+{r.points ?? 0}
+        </span>
+      );
+    }
+    return (
+      <span
+        title="Errou — 0 pts"
+        className={`shrink-0 inline-flex items-center font-bold rounded ${
+          compact
+            ? "text-[8px] px-1 py-px bg-red-100 text-red-500"
+            : "text-[9px] px-1.5 py-0.5 bg-red-50 text-red-500"
+        }`}
+      >
+        ✗0
+      </span>
+    );
+  }
+
   // ─── Match card component (inline) ──────────────────────────────────────────
 
   function MatchCard({ match, small = false }: { match: BracketMatch; small?: boolean }) {
@@ -501,6 +541,7 @@ export default function ClassificationPredictions({
             {team.code}
           </span>
           <span className="truncate flex-1 text-[10px]">{team.name}</span>
+          {teamPhaseBadge(teamId, match.phase, true)}
         </button>
       );
     }
@@ -658,6 +699,11 @@ export default function ClassificationPredictions({
                             <td className="px-1.5 py-1" title={t?.name}>
                               <span className="font-medium">{t?.code}</span>
                               {posBadge && <span className="ml-1">{posBadge}</span>}
+                              {(i < 2 || isQualifiedThird) && (
+                                <span className="ml-1 inline-block align-middle">
+                                  {teamPhaseBadge(s.teamId, "ROUND_32", true)}
+                                </span>
+                              )}
                             </td>
                             <td className="px-1 py-1 text-center font-bold">{s.points}</td>
                             <td className="px-1 py-1 text-center text-gray-500">{s.played}</td>
@@ -722,6 +768,11 @@ export default function ClassificationPredictions({
                       <span className={`truncate text-[10px] ${advances ? "opacity-90" : "opacity-70"}`}>
                         {t.standing.points}pts
                       </span>
+                      {advances && (
+                        <span className="ml-auto">
+                          {teamPhaseBadge(t.team.id, "ROUND_32", true)}
+                        </span>
+                      )}
                       {!advances && <span className="text-[9px] ml-auto">×</span>}
                     </div>
                   );

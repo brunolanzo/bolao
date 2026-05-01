@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calcMatchPoints } from "@/lib/scoring";
+import { resolvePhases } from "@/lib/resolvePhases";
 
 interface ResultUpdate {
   matchId: string;
@@ -62,6 +63,10 @@ export async function POST(request: Request) {
       }
       count++;
     }
+
+    // After applying results, recompute qualifiers and resolve all
+    // PhasePredictions / ChampionPredictions for affected phases.
+    await resolvePhases();
 
     return NextResponse.json({ success: true, count });
   } catch {
