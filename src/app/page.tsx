@@ -127,8 +127,8 @@ function PodiumIcon() {
 ───────────────────────────────────────────────────────────────── */
 function PreviewCard({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
-    <div className="border border-green-200 rounded-xl overflow-hidden bg-white select-none">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-green-100">
+    <div className="border border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow select-none">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 bg-gray-50/60">
         <span className="text-[#009C3B]">{icon}</span>
         <h3 className="font-semibold text-sm tracking-tight">{title}</h3>
       </div>
@@ -206,9 +206,9 @@ function GroupPreviewContent() {
 function ClassificationPreviewContent() {
   const teams = [
     { code: "BRA", sel: true }, { code: "ARG", sel: true }, { code: "FRA", sel: true },
-    { code: "ESP", sel: true }, { code: "ENG", sel: true }, { code: "GER", sel: true },
-    { code: "POR", sel: true }, { code: "ITA", sel: true }, { code: "NED", sel: false },
-    { code: "MEX", sel: false }, { code: "USA", sel: false }, { code: "JPN", sel: false },
+    { code: "ESP", sel: true }, { code: "ING", sel: true }, { code: "ALE", sel: true },
+    { code: "POR", sel: true }, { code: "ITA", sel: true }, { code: "HOL", sel: false },
+    { code: "MEX", sel: false }, { code: "EUA", sel: false }, { code: "JAP", sel: false },
     { code: "CRO", sel: false }, { code: "MAR", sel: false }, { code: "URU", sel: false },
     { code: "SEN", sel: false },
   ];
@@ -342,10 +342,10 @@ function ScoreCard({
 
   return (
     <div
-      className={`rounded-xl bg-white p-4 flex flex-col ${
+      className={`rounded-2xl bg-white p-4 flex flex-col ${
         highlight
-          ? "border-2 border-[#009C3B] shadow-[0_4px_12px_rgba(0,156,59,0.15)]"
-          : "border border-gray-200"
+          ? "border-2 border-[#009C3B] shadow-[0_8px_28px_rgba(0,156,59,0.18)] ring-1 ring-[#009C3B]/10"
+          : "border border-gray-100 shadow-sm"
       }`}
     >
       <div className="text-center mb-3">
@@ -430,7 +430,7 @@ function PhaseTier({
 
 function Podium() {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8">
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 sm:p-8 shadow-sm">
       <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-md mx-auto">
         {/* 2º Vice */}
         <div className="flex-1 flex flex-col items-center">
@@ -502,41 +502,94 @@ export default async function Home() {
     <div className="-mt-6 -mx-4">
 
       {/* ── Hero ─────────────────────────────────────── */}
-      <section className="bg-[#006B2B] text-white">
-        <div className="max-w-6xl mx-auto px-4 py-20 text-center">
-          <TrophySVG />
-          <p className="text-xs tracking-[0.3em] uppercase text-[#FFDF00] mb-3 font-medium">
-            Copa do Mundo FIFA 2026
-          </p>
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-4">
-            Bolão Copa 2026
+      <section className="relative bg-[#001f0d] text-white overflow-hidden">
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#004d20] via-[#002a10] to-[#001208]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_50%_0%,rgba(0,156,59,0.45),transparent)]" />
+        {/* Dot grid texture */}
+        <div
+          className="absolute inset-0 opacity-[0.045]"
+          style={{ backgroundImage: "radial-gradient(circle,white 1px,transparent 1px)", backgroundSize: "28px 28px" }}
+        />
+        {/* Ambient glow orbs */}
+        <div className="pointer-events-none absolute -top-48 -right-48 w-[700px] h-[700px] rounded-full bg-[#009C3B]/12 blur-[130px]" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 w-[500px] h-[500px] rounded-full bg-[#FFDF00]/6 blur-[110px]" />
+
+        <div className="relative max-w-3xl mx-auto px-4 pt-20 pb-16 sm:pt-28 sm:pb-24 text-center">
+          {/* Eyebrow badge */}
+          <div className="inline-flex items-center gap-2 bg-white/[0.08] border border-white/[0.12] rounded-full px-4 py-1.5 mb-10">
+            <span className="text-[#FFDF00] text-sm leading-none">🏆</span>
+            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-white/70">
+              Copa do Mundo FIFA 2026
+            </span>
+          </div>
+
+          {/* Title */}
+          <h1
+            className="font-black leading-[0.88] tracking-tight mb-5"
+            style={{ fontSize: "clamp(3.25rem, 11vw, 7rem)" }}
+          >
+            Bolão Copa
+            <br />
+            <span className="text-[#FFDF00]">2026</span>
           </h1>
-          <p className="text-green-100 text-lg mb-10 max-w-lg mx-auto leading-relaxed">
-            Faça seus palpites, preveja os classificados e dispute com seus amigos num ranking ao vivo.
+
+          {/* Subtitle */}
+          <p className="text-green-200/65 text-lg sm:text-xl mb-10 max-w-sm mx-auto leading-relaxed">
+            Palpites, ranking ao vivo e disputa com amigos.
           </p>
-          <div className="flex gap-4 justify-center flex-wrap">
+
+          {/* CTA buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-14">
             <Link
               href="/registro"
-              className="bg-[#FFDF00] text-[#004D20] px-8 py-3 rounded-md font-semibold hover:bg-[#EDD000] transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#FFDF00] text-[#003a14] px-8 py-4 rounded-2xl font-bold text-[15px] hover:bg-[#f0d000] transition-all shadow-[0_8px_32px_rgba(255,223,0,0.22)] hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(255,223,0,0.32)]"
             >
               Criar Conta
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
             </Link>
             <Link
               href="/login"
-              className="border border-white/30 text-white px-8 py-3 rounded-md font-medium hover:bg-white/10 transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center bg-white/10 border border-white/20 text-white px-8 py-4 rounded-2xl font-medium text-[15px] hover:bg-white/15 transition-all"
             >
-              Entrar
+              Já tenho conta
             </Link>
+          </div>
+
+          {/* Stats row */}
+          <div className="border-t border-white/[0.1] pt-8 flex items-center justify-center max-w-xs mx-auto">
+            {[
+              { value: "48", label: "Seleções" },
+              { value: "104", label: "Jogos" },
+              { value: "3×", label: "Formas de Pontuar" },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className={`flex-1 text-center px-3 ${i > 0 ? "border-l border-white/[0.1]" : ""}`}
+              >
+                <p className="text-2xl sm:text-3xl font-black">{stat.value}</p>
+                <p className="text-[10px] text-green-300/55 uppercase tracking-widest mt-0.5 leading-tight">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── How it works ─────────────────────────────── */}
-      <section className="py-16 px-4 bg-white">
+      <section className="py-20 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold tracking-tight">Como funciona</h2>
-            <p className="text-gray-500 text-sm mt-1.5">
+          <div className="text-center mb-12">
+            <span className="inline-block text-[11px] font-bold tracking-[0.2em] uppercase text-[#009C3B] mb-3">
+              Como funciona
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
+              Tudo que você precisa saber
+            </h2>
+            <p className="text-gray-400 text-base mt-3 max-w-md mx-auto leading-relaxed">
               Palpite nos jogos, preveja os classificados e acompanhe o ranking em tempo real
             </p>
           </div>
@@ -558,17 +611,17 @@ export default async function Home() {
       </section>
 
       {/* ── Como ganhar pontos ───────────────────────── */}
-      <section className="py-16 px-4 bg-green-50">
+      <section className="py-20 px-4 bg-[#f7faf8]">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="inline-block text-xs tracking-[0.3em] uppercase text-[#009C3B] mb-2 font-semibold">
+          <div className="text-center mb-14">
+            <span className="inline-block text-[11px] font-bold tracking-[0.2em] uppercase text-[#009C3B] mb-3">
               Pontuação
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
               Como você ganha pontos
             </h2>
-            <p className="text-gray-500 text-sm mt-2 max-w-xl mx-auto">
-              Três formas de pontuar — quanto melhor seu palpite, mais pontos. Aqui está o resumo visual:
+            <p className="text-gray-400 text-base mt-3 max-w-md mx-auto leading-relaxed">
+              Três formas de pontuar — quanto mais preciso, mais longe você vai no ranking
             </p>
           </div>
 
@@ -750,24 +803,44 @@ export default async function Home() {
           </div>
 
           {/* === Resumo final === */}
-          <div className="mt-12 bg-[#006B2B] text-white rounded-xl p-6 text-center">
-            <p className="text-sm text-green-100 mb-1">Pontuação máxima possível por jogo</p>
-            <p className="text-3xl font-bold tracking-tight">
-              <span className="text-[#FFDF00]">7</span>{" "}
-              <span className="text-base font-medium opacity-80">pts (placar exato)</span>
-            </p>
-            <p className="text-xs text-green-200 mt-3 max-w-md mx-auto">
-              Some os pontos de jogos + classificados + pódio para definir sua posição no ranking ao vivo.
-            </p>
+          <div className="mt-14 relative overflow-hidden bg-[#002d14] text-white rounded-2xl p-8 text-center">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(0,156,59,0.35),transparent)]" />
+            <div className="relative">
+              <p className="text-sm text-green-300/70 uppercase tracking-widest mb-2 font-medium">
+                Pontuação máxima por jogo
+              </p>
+              <p className="font-black tracking-tight leading-none" style={{ fontSize: "clamp(3rem,8vw,5rem)" }}>
+                <span className="text-[#FFDF00]">7</span>
+                <span className="text-2xl font-medium text-white/50 ml-2">pts</span>
+              </p>
+              <p className="text-green-200/60 text-sm mt-4 max-w-md mx-auto">
+                Some jogos + classificados + pódio para subir no ranking ao vivo.
+              </p>
+              <Link
+                href="/registro"
+                className="inline-flex items-center gap-2 mt-6 bg-[#FFDF00] text-[#003a14] px-7 py-3 rounded-xl font-bold text-sm hover:bg-[#f0d000] transition-all shadow-[0_6px_24px_rgba(255,223,0,0.2)]"
+              >
+                Participar agora
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Footer ───────────────────────────────────── */}
-      <footer className="border-t border-green-100 py-8 px-4 text-center bg-white">
-        <p className="text-xs text-green-700 tracking-wide">
-          Todos direitos reservado a Bruno Lanzo. 2026
-        </p>
+      <footer className="border-t border-gray-100 py-10 px-4 bg-white">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm font-bold text-[#006B2B] tracking-tight">Bolão Copa 2026</p>
+          <div className="flex items-center gap-6 text-xs text-gray-400">
+            <Link href="/login" className="hover:text-[#006B2B] transition-colors">Entrar</Link>
+            <Link href="/registro" className="hover:text-[#006B2B] transition-colors">Criar Conta</Link>
+            <Link href="/regulamento" className="hover:text-[#006B2B] transition-colors">Regulamento</Link>
+          </div>
+          <p className="text-xs text-gray-300">© Bruno Lanzo · 2026</p>
+        </div>
       </footer>
 
     </div>
