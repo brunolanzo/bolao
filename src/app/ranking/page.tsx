@@ -10,6 +10,13 @@ export default async function RankingPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
+  const deadlineSetting = await prisma.settings.findUnique({
+    where: { key: "GROUP_DEADLINE" },
+  });
+  const isGroupLocked = deadlineSetting
+    ? new Date() > new Date(deadlineSetting.value)
+    : false;
+
   const users = await prisma.user.findMany({
     where: { role: "user" },
     include: {
@@ -108,7 +115,7 @@ export default async function RankingPage() {
         </p>
       </div>
 
-      <RankingTable ranking={ranking} currentUserId={session.user.id} />
+      <RankingTable ranking={ranking} currentUserId={session.user.id} isGroupLocked={isGroupLocked} />
     </div>
   );
 }

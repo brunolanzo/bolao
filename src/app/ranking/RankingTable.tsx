@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface RankingEntry {
   id: string;
@@ -25,9 +26,10 @@ interface RankingEntry {
 interface Props {
   ranking: RankingEntry[];
   currentUserId: string;
+  isGroupLocked: boolean;
 }
 
-export default function RankingTable({ ranking, currentUserId }: Props) {
+export default function RankingTable({ ranking, currentUserId, isGroupLocked }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (ranking.length === 0) {
@@ -40,6 +42,19 @@ export default function RankingTable({ ranking, currentUserId }: Props) {
 
   return (
     <>
+      {/* Transparency hint — only after lock */}
+      {isGroupLocked && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-[#006B2B] bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          <span>
+            <strong>Transparência:</strong> clique no nome de qualquer participante para ver todos os palpites e pontuação jogo a jogo.
+          </span>
+        </div>
+      )}
+
       {/* Desktop: scrollable table */}
       <div className="hidden md:block border border-gray-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -126,9 +141,16 @@ export default function RankingTable({ ranking, currentUserId }: Props) {
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className={i < 3 ? "font-medium" : ""}>
-                      {user.name}
-                    </span>
+                    {isGroupLocked ? (
+                      <Link
+                        href={`/ranking/${user.id}`}
+                        className={`hover:text-[#006B2B] hover:underline transition-colors ${i < 3 ? "font-medium" : ""}`}
+                      >
+                        {user.name}
+                      </Link>
+                    ) : (
+                      <span className={i < 3 ? "font-medium" : ""}>{user.name}</span>
+                    )}
                     {user.id === currentUserId && (
                       <span className="text-xs text-gray-400 ml-1">(você)</span>
                     )}
@@ -209,12 +231,23 @@ export default function RankingTable({ ranking, currentUserId }: Props) {
                     {i + 1}
                   </span>
                   <div>
-                    <span className={`text-sm ${i < 3 ? "font-bold" : ""}`}>
-                      {user.name}
-                    </span>
-                    {isMe && (
-                      <span className="text-xs text-gray-400 ml-1">(você)</span>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <span className={`text-sm ${i < 3 ? "font-bold" : ""}`}>
+                        {user.name}
+                      </span>
+                      {isMe && (
+                        <span className="text-xs text-gray-400">(você)</span>
+                      )}
+                      {isGroupLocked && (
+                        <Link
+                          href={`/ranking/${user.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[10px] text-[#006B2B] underline ml-1 shrink-0"
+                        >
+                          ver palpites
+                        </Link>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-gray-400">
                         🎯 {user.exactScores}
