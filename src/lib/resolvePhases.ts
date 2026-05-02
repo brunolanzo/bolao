@@ -109,6 +109,10 @@ export async function cascadeBracket() {
           where: { id: t.id },
           data: { homeTeamId: homeId, awayTeamId: awayId },
         });
+        // Update in-memory so subsequent cascade phases (e.g. QF reading R16)
+        // see the newly-assigned teams without a second DB round-trip.
+        t.homeTeamId = homeId;
+        t.awayTeamId = awayId;
       }
     }
   }
