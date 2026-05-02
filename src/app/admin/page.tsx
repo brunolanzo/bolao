@@ -15,9 +15,7 @@ export default async function AdminPage() {
   const finishedMatches = await prisma.match.count({
     where: { status: "FINISHED" },
   });
-  const totalGroupMatches = await prisma.match.count({
-    where: { phase: "GROUP" },
-  });
+  const totalMatches = await prisma.match.count();
   const currentPhase = await prisma.settings.findUnique({
     where: { key: "CURRENT_PHASE" },
   });
@@ -41,7 +39,7 @@ export default async function AdminPage() {
         <div className="border border-green-200 rounded-lg p-4">
           <p className="text-sm text-gray-500">Jogos Finalizados</p>
           <p className="text-3xl font-bold mt-1">
-            {finishedMatches}/{totalGroupMatches}
+            {finishedMatches}/{totalMatches}
           </p>
         </div>
         <div className="border border-green-200 rounded-lg p-4">

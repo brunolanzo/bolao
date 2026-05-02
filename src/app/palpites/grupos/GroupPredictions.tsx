@@ -109,6 +109,7 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
   });
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [saveWarning, setSaveWarning] = useState<Record<string, number>>({}); // groupLabel → skipped count
 
   function updatePrediction(matchId: string, field: "homeScore" | "awayScore", value: string) {
     if (value === "") {
@@ -142,13 +143,15 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
     setSaved((prev) => ({ ...prev, [groupLabel]: false }));
 
     const groupMatches = groups[groupLabel];
-    const groupPredictions = groupMatches
-      .filter((m) => predictions[m.id] && predictions[m.id].homeScore !== null && predictions[m.id].awayScore !== null)
-      .map((m) => ({
-        matchId: m.id,
-        homeScore: predictions[m.id].homeScore as number,
-        awayScore: predictions[m.id].awayScore as number,
-      }));
+    const complete = groupMatches.filter(
+      (m) => predictions[m.id] && predictions[m.id].homeScore !== null && predictions[m.id].awayScore !== null
+    );
+    const skipped = groupMatches.length - complete.length;
+    const groupPredictions = complete.map((m) => ({
+      matchId: m.id,
+      homeScore: predictions[m.id].homeScore as number,
+      awayScore: predictions[m.id].awayScore as number,
+    }));
 
     try {
       const res = await fetch("/api/predictions", {
@@ -158,8 +161,13 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
       });
 
       if (res.ok) {
-        setSaved((prev) => ({ ...prev, [groupLabel]: true }));
-        setTimeout(() => setSaved((prev) => ({ ...prev, [groupLabel]: false })), 2000);
+        if (skipped > 0) {
+          setSaveWarning((prev) => ({ ...prev, [groupLabel]: skipped }));
+          setTimeout(() => setSaveWarning((prev) => ({ ...prev, [groupLabel]: 0 })), 4000);
+        } else {
+          setSaved((prev) => ({ ...prev, [groupLabel]: true }));
+          setTimeout(() => setSaved((prev) => ({ ...prev, [groupLabel]: false })), 2000);
+        }
       }
     } finally {
       setSaving((prev) => ({ ...prev, [groupLabel]: false }));
@@ -207,21 +215,28 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold">Grupo {groupLabel}</h2>
                 {!isLocked && (
-                  <button
-                    onClick={() => saveGroup(groupLabel)}
-                    disabled={saving[groupLabel]}
-                    className={`text-sm px-3 py-1 rounded-md transition-colors ${
-                      saved[groupLabel]
-                        ? "bg-green-100 text-green-700"
-                        : "bg-[#009C3B] text-white hover:bg-[#006B2B]"
-                    } disabled:opacity-50`}
-                  >
-                    {saving[groupLabel]
-                      ? "Salvando..."
-                      : saved[groupLabel]
-                      ? "Salvo!"
-                      : "Salvar"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {saveWarning[groupLabel] > 0 && (
+                      <span className="text-xs text-amber-600 font-medium">
+                        ⚠️ {saveWarning[groupLabel]} jogo{saveWarning[groupLabel] > 1 ? "s" : ""} incompleto{saveWarning[groupLabel] > 1 ? "s" : ""} não salvo{saveWarning[groupLabel] > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => saveGroup(groupLabel)}
+                      disabled={saving[groupLabel]}
+                      className={`text-sm px-3 py-1 rounded-md transition-colors ${
+                        saved[groupLabel]
+                          ? "bg-green-100 text-green-700"
+                          : "bg-[#009C3B] text-white hover:bg-[#006B2B]"
+                      } disabled:opacity-50`}
+                    >
+                      {saving[groupLabel]
+                        ? "Salvando..."
+                        : saved[groupLabel]
+                        ? "Salvo!"
+                        : "Salvar"}
+                    </button>
+                  </div>
                 )}
               </div>
 

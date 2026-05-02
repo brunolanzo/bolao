@@ -2,6 +2,12 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import bcrypt from "bcryptjs";
 
+// ⚠️  SAFETY GUARD — never run seed in production (it wipes ALL data)
+if (process.env.NODE_ENV === "production") {
+  console.error("❌  seed.ts recusado em produção — destruiria todos os dados dos usuários!");
+  process.exit(1);
+}
+
 const adapter = new PrismaBetterSqlite3({
   url: "file:./dev.db",
 });

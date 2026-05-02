@@ -2,11 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  CHAMPION_POINTS,
-  RUNNER_UP_POINTS,
-  THIRD_PLACE_POINTS,
-} from "@/lib/scoring";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -52,30 +47,6 @@ export async function POST(request: Request) {
         data: { role: "admin" },
       });
       return NextResponse.json({ success: true });
-    }
-
-    if (action === "calculateChampionPoints") {
-      const { championId, runnerUpId, thirdPlaceId } = data;
-
-      // Update all champion predictions
-      const predictions = await prisma.championPrediction.findMany();
-
-      for (const pred of predictions) {
-        const champPts = pred.championTeamId === championId ? CHAMPION_POINTS : 0;
-        const runnerPts = pred.runnerUpTeamId === runnerUpId ? RUNNER_UP_POINTS : 0;
-        const thirdPts = pred.thirdPlaceTeamId === thirdPlaceId ? THIRD_PLACE_POINTS : 0;
-
-        await prisma.championPrediction.update({
-          where: { id: pred.id },
-          data: {
-            championPoints: champPts,
-            runnerUpPoints: runnerPts,
-            thirdPlacePoints: thirdPts,
-          },
-        });
-      }
-
-      return NextResponse.json({ success: true, updated: predictions.length });
     }
 
     return NextResponse.json({ error: "Ação inválida" }, { status: 400 });

@@ -94,7 +94,9 @@ export default async function RankingPage() {
       if (b.totalPhasePts !== a.totalPhasePts)
         return b.totalPhasePts - a.totalPhasePts;
       // 4. Champion/vice/3rd points (tiebreaker 3)
-      return b.totalChampPts - a.totalChampPts;
+      if (b.totalChampPts !== a.totalChampPts) return b.totalChampPts - a.totalChampPts;
+      // 5. Alphabetical (stable tiebreaker — prevents random order on ties)
+      return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
     });
 
   return (
