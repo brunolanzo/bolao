@@ -40,6 +40,9 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
     return obj;
   });
   const [saving, setSaving] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetDone, setResetDone] = useState<string | null>(null);
 
   async function saveSettings() {
     setSaving(true);
@@ -52,6 +55,22 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
       alert("Configurações salvas!");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function launchReset() {
+    setResetting(true);
+    setResetDone(null);
+    try {
+      const res = await fetch("/api/admin/launch-reset", { method: "POST" });
+      const data = await res.json();
+      setResetDone(data.message);
+      setResetConfirm("");
+      window.location.reload();
+    } catch {
+      setResetDone("Erro ao executar o reset.");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -110,6 +129,54 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
             {saving ? "Salvando..." : "Salvar Configurações"}
           </button>
         </div>
+      </div>
+
+      {/* ── Launch Reset ── */}
+      <div className="border-2 border-red-200 bg-red-50 rounded-lg p-4">
+        <div className="flex items-start gap-3 mb-3">
+          <span className="text-xl leading-none mt-0.5">⚠️</span>
+          <div>
+            <h2 className="font-bold text-red-800">Reset para Launch</h2>
+            <p className="text-sm text-red-700 mt-0.5">
+              Remove <strong>todos os usuários</strong> (exceto admin) e zera <strong>todos os resultados</strong>.
+              Times, jogos, estrutura e sistemática de pontuação ficam intactos.
+            </p>
+            <ul className="text-xs text-red-600 mt-2 space-y-0.5 list-disc list-inside">
+              <li>Apaga: usuários, palpites, pagamentos, dados bancários</li>
+              <li>Zera: placar de todos os jogos, status → AGENDADO</li>
+              <li>Limpa: times dos jogos eliminatórios (voltam ao estado pós-seed)</li>
+              <li>Preserva: admin, times, calendário, configurações, pontuação</li>
+            </ul>
+          </div>
+        </div>
+
+        {resetDone ? (
+          <p className="text-sm font-medium text-green-700 bg-white border border-green-200 rounded px-3 py-2">
+            ✅ {resetDone}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-red-700">
+              Digite <span className="font-mono bg-red-100 px-1 rounded">CONFIRMAR</span> para habilitar o botão:
+            </label>
+            <input
+              type="text"
+              value={resetConfirm}
+              onChange={(e) => setResetConfirm(e.target.value)}
+              placeholder="CONFIRMAR"
+              className="w-full border border-red-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-400 bg-white font-mono"
+            />
+            <button
+              onClick={launchReset}
+              disabled={resetConfirm !== "CONFIRMAR" || resetting}
+              className="w-full bg-red-600 text-white text-sm px-4 py-2.5 rounded-md font-semibold
+                         hover:bg-red-700 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {resetting ? "Executando reset…" : "🚀 Executar Reset e Preparar Launch"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Users */}
