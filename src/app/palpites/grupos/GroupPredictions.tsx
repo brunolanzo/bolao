@@ -280,29 +280,31 @@ export default function GroupPredictions({ groups, initialPredictions, isLocked,
                       <span className="flex-1 truncate">
                         {match.awayTeam?.name || "TBD"}
                       </span>
-                      {/* Points / Aguardando badge */}
-                      {isFinished ? (
-                        <span
-                          className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${
-                            points === null
-                              ? "bg-gray-100 text-gray-400"
-                              : points === 0
-                                ? "bg-gray-100 text-gray-500"
-                                : points >= 7
-                                  ? "bg-green-600 text-white"
-                                  : points >= 4
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-yellow-100 text-yellow-700"
-                          }`}
-                          title={`Resultado: ${match.homeScore} x ${match.awayScore}`}
-                        >
-                          {points !== null ? `${points} pt${points === 1 ? "" : "s"}` : "—"}
-                        </span>
-                      ) : (
-                        <span className="shrink-0 text-[10px] text-gray-400 px-1.5 py-0.5 rounded bg-gray-50 whitespace-nowrap">
-                          Aguardando
-                        </span>
-                      )}
+                      {/* Points / Aguardando badge — fixed width so score inputs stay aligned */}
+                      <div className="w-[4.5rem] shrink-0 flex justify-end">
+                        {isFinished ? (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${
+                              points === null
+                                ? "bg-gray-100 text-gray-400"
+                                : points === 0
+                                  ? "bg-gray-100 text-gray-500"
+                                  : points >= 7
+                                    ? "bg-green-600 text-white"
+                                    : points >= 4
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-yellow-100 text-yellow-700"
+                            }`}
+                            title={`Resultado: ${match.homeScore} x ${match.awayScore}`}
+                          >
+                            {points !== null ? `${points} pt${points === 1 ? "" : "s"}` : "—"}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-400 px-1.5 py-0.5 rounded bg-gray-50 whitespace-nowrap">
+                            Aguardando
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
