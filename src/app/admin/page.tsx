@@ -62,15 +62,6 @@ export default async function AdminPage() {
           </p>
         </Link>
         <Link
-          href="/admin/fases"
-          className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors"
-        >
-          <h3 className="font-bold mb-1">Gerenciar Fases</h3>
-          <p className="text-sm text-gray-500">
-            Definir classificados e confrontos das eliminatórias
-          </p>
-        </Link>
-        <Link
           href="/admin/pagamentos"
           className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors"
         >

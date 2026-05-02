@@ -14,19 +14,24 @@ interface User {
   role: string;
 }
 
-interface Team {
-  id: string;
-  name: string;
-  code: string;
-}
-
 interface Props {
   settings: Setting[];
   users: User[];
-  teams: Team[];
 }
 
-export default function AdminSettings({ settings: initialSettings, users, teams }: Props) {
+/** "2026-06-11T00:00:00Z"  →  "2026-06-11T00:00" */
+function isoToLocal(iso: string): string {
+  if (!iso) return "";
+  return iso.slice(0, 16);
+}
+
+/** "2026-06-11T00:00"  →  "2026-06-11T00:00:00Z" */
+function localToIso(local: string): string {
+  if (!local) return "";
+  return local + ":00Z";
+}
+
+export default function AdminSettings({ settings: initialSettings, users }: Props) {
   const [settings, setSettings] = useState<Record<string, string>>(() => {
     const obj: Record<string, string> = {};
     for (const s of initialSettings) {
@@ -35,9 +40,6 @@ export default function AdminSettings({ settings: initialSettings, users, teams 
     return obj;
   });
   const [saving, setSaving] = useState(false);
-  const [championId, setChampionId] = useState("");
-  const [runnerUpId, setRunnerUpId] = useState("");
-  const [thirdPlaceId, setThirdPlaceId] = useState("");
 
   async function saveSettings() {
     setSaving(true);
@@ -62,22 +64,6 @@ export default function AdminSettings({ settings: initialSettings, users, teams 
     window.location.reload();
   }
 
-  async function calculateChampionPoints() {
-    if (!championId || !runnerUpId || !thirdPlaceId) {
-      alert("Selecione campeão, vice e 3º lugar");
-      return;
-    }
-    await fetch("/api/admin/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "calculateChampionPoints",
-        data: { championId, runnerUpId, thirdPlaceId },
-      }),
-    });
-    alert("Pontos de campeão calculados!");
-  }
-
   return (
     <div className="space-y-8">
       {/* Deadlines */}
@@ -86,16 +72,15 @@ export default function AdminSettings({ settings: initialSettings, users, teams 
         <div className="space-y-3">
           <div>
             <label className="block text-sm text-gray-500 mb-1">
-              Deadline Fase de Grupos (ISO 8601)
+              Deadline Fase de Grupos <span className="text-xs text-gray-400">(UTC)</span>
             </label>
             <input
-              type="text"
-              value={settings.GROUP_DEADLINE || ""}
+              type="datetime-local"
+              value={isoToLocal(settings.GROUP_DEADLINE || "")}
               onChange={(e) =>
-                setSettings((prev) => ({ ...prev, GROUP_DEADLINE: e.target.value }))
+                setSettings((prev) => ({ ...prev, GROUP_DEADLINE: localToIso(e.target.value) }))
               }
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
-              placeholder="2026-06-11T00:00:00Z"
             />
           </div>
           <div>
@@ -125,61 +110,6 @@ export default function AdminSettings({ settings: initialSettings, users, teams 
             {saving ? "Salvando..." : "Salvar Configurações"}
           </button>
         </div>
-      </div>
-
-      {/* Champion points */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h2 className="font-bold mb-3">Definir Campeão / Vice / 3º Lugar</h2>
-        <p className="text-sm text-gray-500 mb-3">
-          Ao definir, os pontos serão calculados para todos os participantes.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">Campeão</label>
-            <select
-              value={championId}
-              onChange={(e) => setChampionId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">Selecione</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">Vice</label>
-            <select
-              value={runnerUpId}
-              onChange={(e) => setRunnerUpId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">Selecione</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">3º Lugar</label>
-            <select
-              value={thirdPlaceId}
-              onChange={(e) => setThirdPlaceId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">Selecione</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <button
-          onClick={calculateChampionPoints}
-          className="bg-black text-white text-sm px-4 py-2 rounded-md hover:bg-gray-800"
-        >
-          Calcular Pontos de Campeão
-        </button>
       </div>
 
       {/* Users */}

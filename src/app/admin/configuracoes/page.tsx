@@ -15,10 +15,6 @@ export default async function ConfiguracoesPage() {
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: "asc" },
   });
-  const teams = await prisma.team.findMany({
-    orderBy: { name: "asc" },
-  });
-
   return (
     <div>
       <div className="mb-6">
@@ -27,7 +23,6 @@ export default async function ConfiguracoesPage() {
       <AdminSettings
         settings={JSON.parse(JSON.stringify(settings))}
         users={JSON.parse(JSON.stringify(users))}
-        teams={JSON.parse(JSON.stringify(teams))}
       />
     </div>
   );
