@@ -10,8 +10,8 @@ export default async function RegulamentoPage() {
     {
       title: "Como funciona",
       items: [
-        "Cada participante faz seus palpites antes do início da Copa do Mundo.",
-        "Os palpites são divididos em três etapas: resultados dos jogos da fase de grupos, previsão de classificados em cada fase eliminatória e previsão de campeão, vice e terceiro colocado.",
+        "Cada participante faz seus palpites da fase de grupos, chaveamento e campeão antes do início da Copa do Mundo. E a cada nova rodada do mata-mata, novos palpites são liberados.",
+        "Os palpites são divididos em três etapas: resultados dos jogos da fase de grupos, previsão de classificados em cada fase eliminatória e resultados dos jogos da fase eliminatória.",
         "Pontos são acumulados ao longo do torneio e um ranking geral é atualizado automaticamente.",
       ],
     },
