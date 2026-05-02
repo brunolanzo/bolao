@@ -35,7 +35,7 @@ export default function Header() {
     <header className="border-b border-green-200 bg-white">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link
-          href={session ? (session.user.role === "admin" ? "/admin" : "/dashboard") : "/"}
+          href={session ? (session.user.role === "admin" ? "/admin/resultados" : "/dashboard") : "/"}
           className="text-lg font-bold tracking-tight text-[#006B2B]"
         >
           Bolão Copa 2026

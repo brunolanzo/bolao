@@ -496,7 +496,7 @@ function Podium() {
 ───────────────────────────────────────────────────────────────── */
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  if (session) redirect(session.user.role === "admin" ? "/admin" : "/dashboard");
+  if (session) redirect(session.user.role === "admin" ? "/admin/resultados" : "/dashboard");
 
   return (
     <div className="-mt-6 -mx-4">

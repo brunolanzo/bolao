@@ -40,8 +40,6 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
     return obj;
   });
   const [saving, setSaving] = useState(false);
-  const [migrating, setMigrating] = useState(false);
-  const [migrateResult, setMigrateResult] = useState<string | null>(null);
 
   async function saveSettings() {
     setSaving(true);
@@ -54,21 +52,6 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
       alert("Configurações salvas!");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function migrateTeamCodes() {
-    if (!confirm("Atualizar todos os códigos de seleções para PT-BR no banco de dados?")) return;
-    setMigrating(true);
-    setMigrateResult(null);
-    try {
-      const res = await fetch("/api/admin/migrate-team-codes", { method: "POST" });
-      const data = await res.json();
-      setMigrateResult(data.message);
-    } catch {
-      setMigrateResult("Erro ao executar a migração.");
-    } finally {
-      setMigrating(false);
     }
   }
 
@@ -127,27 +110,6 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
             {saving ? "Salvando..." : "Salvar Configurações"}
           </button>
         </div>
-      </div>
-
-      {/* Team codes migration */}
-      <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
-        <h2 className="font-bold mb-1">Migração de Códigos de Seleções</h2>
-        <p className="text-sm text-gray-500 mb-3">
-          Atualiza todos os códigos de abreviação das seleções de inglês/internacional para PT-BR
-          (ex: EGY→EGI, GER→ALE, ENG→ING, USA→EUA, JPN→JAP…). Seguro — não apaga dados de palpites.
-        </p>
-        <button
-          onClick={migrateTeamCodes}
-          disabled={migrating}
-          className="bg-amber-500 text-white text-sm px-4 py-2 rounded-md hover:bg-amber-600 disabled:opacity-50"
-        >
-          {migrating ? "Migrando..." : "Executar Migração PT-BR"}
-        </button>
-        {migrateResult && (
-          <p className="mt-3 text-sm text-gray-700 bg-white border border-amber-200 rounded px-3 py-2">
-            ✅ {migrateResult}
-          </p>
-        )}
       </div>
 
       {/* Users */}
