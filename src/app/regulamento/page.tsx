@@ -88,6 +88,14 @@ export default async function RegulamentoPage() {
       ],
     },
     {
+      title: "Transparência",
+      items: [
+        "Após o prazo de palpites ser encerrado, todos os participantes terão acesso aos palpites de qualquer outro jogador — incluindo previsões de classificados, campeão/vice/3º e palpites de placares futuros.",
+        "O ranking é atualizado em tempo real e todos podem acompanhar a pontuação de cada participante a qualquer momento.",
+        "Os organizadores do bolão não participam como jogadores. Seu papel é exclusivamente a gestão do bolão: inserir resultados, gerenciar prazos e garantir o bom funcionamento da plataforma.",
+      ],
+    },
+    {
       title: "Regras Gerais",
       items: [
         "Cada participante pode ter apenas uma conta no bolão.",
