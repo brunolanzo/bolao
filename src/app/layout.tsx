@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import Header from "@/components/Header";
+import PrizeBanner from "@/components/PrizeBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased bg-white text-black`}>
         <SessionProvider>
           <Header />
+          <PrizeBanner />
           <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
         </SessionProvider>
       </body>
