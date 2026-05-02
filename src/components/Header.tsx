@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Header() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [palpitesOpen, setPalpitesOpen] = useState(false);
   const [paymentPaid, setPaymentPaid] = useState<boolean | null>(null);
+  const palpitesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (session && session.user.role !== "admin") {
@@ -18,10 +20,24 @@ export default function Header() {
     }
   }, [session]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (palpitesRef.current && !palpitesRef.current.contains(e.target as Node)) {
+        setPalpitesOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <header className="border-b border-green-200 bg-white">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="text-lg font-bold tracking-tight text-[#006B2B]">
+        <Link
+          href={session ? (session.user.role === "admin" ? "/admin" : "/dashboard") : "/"}
+          className="text-lg font-bold tracking-tight text-[#006B2B]"
+        >
           Bolão Copa 2026
         </Link>
 
@@ -31,17 +47,61 @@ export default function Header() {
             <nav className="hidden md:flex items-center gap-6 text-sm">
               {session.user.role !== "admin" && (
                 <>
-                  <Link href="/palpites/grupos" className="hover:text-[#009C3B] transition-colors">
-                    Palpites de Grupos
+                  <Link href="/dashboard" className="hover:text-[#009C3B] transition-colors">
+                    Início
                   </Link>
-                  <Link href="/palpites/classificacao" className="hover:text-[#009C3B] transition-colors">
-                    Palpites Mata-Mata
-                  </Link>
-                  <Link href="/palpites/eliminatorias" className="hover:text-[#009C3B] transition-colors">
-                    Palpites Segunda Fase
-                  </Link>
+
+                  {/* Palpites dropdown */}
+                  <div ref={palpitesRef} className="relative">
+                    <button
+                      onClick={() => setPalpitesOpen((o) => !o)}
+                      className="flex items-center gap-1 hover:text-[#009C3B] transition-colors"
+                    >
+                      Palpites
+                      <svg
+                        className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-150 ${palpitesOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {palpitesOpen && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-50 min-w-[210px]">
+                        {/* small caret */}
+                        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45" />
+                        <Link
+                          href="/palpites/grupos"
+                          onClick={() => setPalpitesOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-green-50 hover:text-[#006B2B] transition-colors"
+                        >
+                          <span className="text-base">⚽</span>
+                          Fase de Grupos
+                        </Link>
+                        <Link
+                          href="/palpites/classificacao"
+                          onClick={() => setPalpitesOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-green-50 hover:text-[#006B2B] transition-colors"
+                        >
+                          <span className="text-base">🏆</span>
+                          Chaveamento e Campeão
+                        </Link>
+                        <Link
+                          href="/palpites/eliminatorias"
+                          onClick={() => setPalpitesOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-green-50 hover:text-[#006B2B] transition-colors"
+                        >
+                          <span className="text-base">⚡</span>
+                          Eliminatórias
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
+
               <Link href="/ranking" className="hover:text-[#009C3B] transition-colors">
                 Ranking
               </Link>
@@ -111,15 +171,26 @@ export default function Header() {
           <div className="px-4 py-3 space-y-3 text-sm">
             {session.user.role !== "admin" && (
               <>
-                <Link href="/palpites/grupos" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
-                  Palpites de Grupos
+                <Link href="/dashboard" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                  Início
                 </Link>
-                <Link href="/palpites/classificacao" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
-                  Palpites Mata-Mata
-                </Link>
-                <Link href="/palpites/eliminatorias" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
-                  Palpites Segunda Fase
-                </Link>
+                {/* Palpites section */}
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                    Palpites
+                  </p>
+                  <div className="space-y-2 pl-2 border-l-2 border-green-100">
+                    <Link href="/palpites/grupos" className="flex items-center gap-2 hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                      <span>⚽</span> Fase de Grupos
+                    </Link>
+                    <Link href="/palpites/classificacao" className="flex items-center gap-2 hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                      <span>🏆</span> Chaveamento e Campeão
+                    </Link>
+                    <Link href="/palpites/eliminatorias" className="flex items-center gap-2 hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                      <span>⚡</span> Eliminatórias
+                    </Link>
+                  </div>
+                </div>
               </>
             )}
             <Link href="/ranking" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
