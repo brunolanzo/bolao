@@ -170,8 +170,10 @@ export async function POST() {
       );
     }
 
-    // Update each match
-    let updated = 0;
+    // Compute all slot assignments first, validating no duplicate teams
+    const usedTeams = new Set<string>();
+    const assignments: Array<{ matchId: string; homeTeamId: string | null; awayTeamId: string | null }> = [];
+
     for (let i = 0; i < R32_SLOTS.length; i++) {
       const slot = R32_SLOTS[i];
       const match = r32Matches[i];
@@ -187,13 +189,38 @@ export async function POST() {
       else if (slot.away.kind === "2nd") awayTeamId = resolve2nd(slot.away.group);
       else awayTeamId = slotAssignments[i] ?? null;
 
-      if (homeTeamId && awayTeamId) {
-        await prisma.match.update({
-          where: { id: match.id },
-          data: { homeTeamId, awayTeamId },
-        });
-        updated++;
+      // Guard: no team can appear twice in the same phase
+      if (homeTeamId) {
+        if (usedTeams.has(homeTeamId)) {
+          return NextResponse.json(
+            { error: `Time duplicado no bracket (casa): ${homeTeamId} no jogo M${match.matchOrder}` },
+            { status: 400 },
+          );
+        }
+        usedTeams.add(homeTeamId);
       }
+      if (awayTeamId) {
+        if (usedTeams.has(awayTeamId)) {
+          return NextResponse.json(
+            { error: `Time duplicado no bracket (fora): ${awayTeamId} no jogo M${match.matchOrder}` },
+            { status: 400 },
+          );
+        }
+        usedTeams.add(awayTeamId);
+      }
+
+      assignments.push({ matchId: match.id, homeTeamId, awayTeamId });
+    }
+
+    // Apply all assignments — always update ALL 16 matches (even to null)
+    // to prevent stale team data from a previous auto-bracket run.
+    let updated = 0;
+    for (const a of assignments) {
+      await prisma.match.update({
+        where: { id: a.matchId },
+        data: { homeTeamId: a.homeTeamId, awayTeamId: a.awayTeamId },
+      });
+      if (a.homeTeamId && a.awayTeamId) updated++;
     }
 
     // Now that ROUND_32 teams are set, resolve PhasePredictions for ROUND_32
