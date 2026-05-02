@@ -17,7 +17,7 @@ const prisma = new PrismaClient({ adapter });
 const teams = [
   // Group A
   { name: "México", code: "MEX", groupLabel: "A" },
-  { name: "África do Sul", code: "RSA", groupLabel: "A" },
+  { name: "África do Sul", code: "AFS", groupLabel: "A" },
   { name: "Coreia do Sul", code: "COR", groupLabel: "A" },
   { name: "Vencedor UEFA D", code: "UD", groupLabel: "A" },
   // Group B
@@ -31,18 +31,18 @@ const teams = [
   { name: "Haiti", code: "HAI", groupLabel: "C" },
   { name: "Escócia", code: "ESC", groupLabel: "C" },
   // Group D
-  { name: "Estados Unidos", code: "USA", groupLabel: "D" },
+  { name: "Estados Unidos", code: "EUA", groupLabel: "D" },
   { name: "Paraguai", code: "PAR", groupLabel: "D" },
   { name: "Austrália", code: "AUS", groupLabel: "D" },
   { name: "Vencedor UEFA C", code: "UC", groupLabel: "D" },
   // Group E
   { name: "Alemanha", code: "ALE", groupLabel: "E" },
-  { name: "Curaçao", code: "CUW", groupLabel: "E" },
+  { name: "Curaçao", code: "CUR", groupLabel: "E" },
   { name: "Costa do Marfim", code: "CMF", groupLabel: "E" },
   { name: "Equador", code: "EQU", groupLabel: "E" },
   // Group F
   { name: "Holanda", code: "HOL", groupLabel: "F" },
-  { name: "Japão", code: "JPN", groupLabel: "F" },
+  { name: "Japão", code: "JAP", groupLabel: "F" },
   { name: "Tunísia", code: "TUN", groupLabel: "F" },
   { name: "Vencedor UEFA B", code: "UB", groupLabel: "F" },
   // Group G
@@ -88,12 +88,12 @@ interface MatchData {
 
 const groupMatches: MatchData[] = [
   // Group A - Jun 11, 18, 24
-  { matchOrder: 1, phase: "GROUP", groupLabel: "A", homeCode: "MEX", awayCode: "RSA", date: "2026-06-11" },
+  { matchOrder: 1, phase: "GROUP", groupLabel: "A", homeCode: "MEX", awayCode: "AFS", date: "2026-06-11" },
   { matchOrder: 2, phase: "GROUP", groupLabel: "A", homeCode: "COR", awayCode: "UD", date: "2026-06-11" },
-  { matchOrder: 25, phase: "GROUP", groupLabel: "A", homeCode: "UD", awayCode: "RSA", date: "2026-06-18" },
+  { matchOrder: 25, phase: "GROUP", groupLabel: "A", homeCode: "UD", awayCode: "AFS", date: "2026-06-18" },
   { matchOrder: 28, phase: "GROUP", groupLabel: "A", homeCode: "MEX", awayCode: "COR", date: "2026-06-18" },
   { matchOrder: 53, phase: "GROUP", groupLabel: "A", homeCode: "UD", awayCode: "MEX", date: "2026-06-24" },
-  { matchOrder: 54, phase: "GROUP", groupLabel: "A", homeCode: "RSA", awayCode: "COR", date: "2026-06-24" },
+  { matchOrder: 54, phase: "GROUP", groupLabel: "A", homeCode: "AFS", awayCode: "COR", date: "2026-06-24" },
   // Group B - Jun 12-13, 18, 24
   { matchOrder: 3, phase: "GROUP", groupLabel: "B", homeCode: "CAN", awayCode: "UA", date: "2026-06-12" },
   { matchOrder: 8, phase: "GROUP", groupLabel: "B", homeCode: "CAT", awayCode: "SUI", date: "2026-06-13" },
@@ -109,25 +109,25 @@ const groupMatches: MatchData[] = [
   { matchOrder: 49, phase: "GROUP", groupLabel: "C", homeCode: "ESC", awayCode: "BRA", date: "2026-06-24" },
   { matchOrder: 50, phase: "GROUP", groupLabel: "C", homeCode: "MAR", awayCode: "HAI", date: "2026-06-24" },
   // Group D - Jun 12-13, 19, 25
-  { matchOrder: 4, phase: "GROUP", groupLabel: "D", homeCode: "USA", awayCode: "PAR", date: "2026-06-12" },
+  { matchOrder: 4, phase: "GROUP", groupLabel: "D", homeCode: "EUA", awayCode: "PAR", date: "2026-06-12" },
   { matchOrder: 6, phase: "GROUP", groupLabel: "D", homeCode: "AUS", awayCode: "UC", date: "2026-06-13" },
   { matchOrder: 31, phase: "GROUP", groupLabel: "D", homeCode: "UC", awayCode: "PAR", date: "2026-06-19" },
-  { matchOrder: 32, phase: "GROUP", groupLabel: "D", homeCode: "USA", awayCode: "AUS", date: "2026-06-19" },
-  { matchOrder: 59, phase: "GROUP", groupLabel: "D", homeCode: "UC", awayCode: "USA", date: "2026-06-25" },
+  { matchOrder: 32, phase: "GROUP", groupLabel: "D", homeCode: "EUA", awayCode: "AUS", date: "2026-06-19" },
+  { matchOrder: 59, phase: "GROUP", groupLabel: "D", homeCode: "UC", awayCode: "EUA", date: "2026-06-25" },
   { matchOrder: 60, phase: "GROUP", groupLabel: "D", homeCode: "PAR", awayCode: "AUS", date: "2026-06-25" },
   // Group E - Jun 14, 20, 25
   { matchOrder: 9, phase: "GROUP", groupLabel: "E", homeCode: "CMF", awayCode: "EQU", date: "2026-06-14" },
-  { matchOrder: 10, phase: "GROUP", groupLabel: "E", homeCode: "ALE", awayCode: "CUW", date: "2026-06-14" },
+  { matchOrder: 10, phase: "GROUP", groupLabel: "E", homeCode: "ALE", awayCode: "CUR", date: "2026-06-14" },
   { matchOrder: 33, phase: "GROUP", groupLabel: "E", homeCode: "ALE", awayCode: "CMF", date: "2026-06-20" },
-  { matchOrder: 34, phase: "GROUP", groupLabel: "E", homeCode: "EQU", awayCode: "CUW", date: "2026-06-20" },
-  { matchOrder: 55, phase: "GROUP", groupLabel: "E", homeCode: "CUW", awayCode: "CMF", date: "2026-06-25" },
+  { matchOrder: 34, phase: "GROUP", groupLabel: "E", homeCode: "EQU", awayCode: "CUR", date: "2026-06-20" },
+  { matchOrder: 55, phase: "GROUP", groupLabel: "E", homeCode: "CUR", awayCode: "CMF", date: "2026-06-25" },
   { matchOrder: 56, phase: "GROUP", groupLabel: "E", homeCode: "EQU", awayCode: "ALE", date: "2026-06-25" },
   // Group F - Jun 14, 20, 25
-  { matchOrder: 11, phase: "GROUP", groupLabel: "F", homeCode: "HOL", awayCode: "JPN", date: "2026-06-14" },
+  { matchOrder: 11, phase: "GROUP", groupLabel: "F", homeCode: "HOL", awayCode: "JAP", date: "2026-06-14" },
   { matchOrder: 12, phase: "GROUP", groupLabel: "F", homeCode: "UB", awayCode: "TUN", date: "2026-06-14" },
   { matchOrder: 35, phase: "GROUP", groupLabel: "F", homeCode: "HOL", awayCode: "UB", date: "2026-06-20" },
-  { matchOrder: 36, phase: "GROUP", groupLabel: "F", homeCode: "TUN", awayCode: "JPN", date: "2026-06-20" },
-  { matchOrder: 57, phase: "GROUP", groupLabel: "F", homeCode: "JPN", awayCode: "UB", date: "2026-06-25" },
+  { matchOrder: 36, phase: "GROUP", groupLabel: "F", homeCode: "TUN", awayCode: "JAP", date: "2026-06-20" },
+  { matchOrder: 57, phase: "GROUP", groupLabel: "F", homeCode: "JAP", awayCode: "UB", date: "2026-06-25" },
   { matchOrder: 58, phase: "GROUP", groupLabel: "F", homeCode: "TUN", awayCode: "HOL", date: "2026-06-25" },
   // Group G - Jun 15, 21, 26
   { matchOrder: 15, phase: "GROUP", groupLabel: "G", homeCode: "IRA", awayCode: "NZE", date: "2026-06-15" },
