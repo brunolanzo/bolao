@@ -58,6 +58,11 @@ export default async function ClassificacaoPage() {
     where: { key: `BRACKET_${session.user.id}` },
   });
 
+  const championPrediction = await prisma.championPrediction.findUnique({
+    where: { userId: session.user.id },
+    select: { championPoints: true, runnerUpPoints: true, thirdPlacePoints: true },
+  });
+
   const isLocked = deadline ? new Date() > new Date(deadline.value) : false;
   const bracketState = bracketStateSetting
     ? JSON.parse(bracketStateSetting.value)
@@ -85,6 +90,7 @@ export default async function ClassificacaoPage() {
         initialBracketState={bracketState}
         isLocked={isLocked}
         deadline={deadline?.value || null}
+        championPoints={championPrediction}
       />
     </div>
   );

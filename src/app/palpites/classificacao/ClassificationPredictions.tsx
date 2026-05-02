@@ -61,6 +61,12 @@ interface TeamPhaseResult {
   points: number | null;
 }
 
+interface ChampionPoints {
+  championPoints: number | null;
+  runnerUpPoints: number | null;
+  thirdPlacePoints: number | null;
+}
+
 interface Props {
   teams: Team[];
   groupMatches: GroupMatch[];
@@ -74,6 +80,7 @@ interface Props {
   };
   isLocked: boolean;
   deadline: string | null;
+  championPoints?: ChampionPoints | null;
 }
 
 // ─── Bracket structure (official Copa do Mundo 2026) ─────────────────────────
@@ -202,6 +209,7 @@ export default function ClassificationPredictions({
   initialBracketState,
   isLocked,
   deadline,
+  championPoints,
 }: Props) {
   const [tab, setTab] = useState<"groups" | "bracket">("groups");
 
@@ -965,14 +973,25 @@ export default function ClassificationPredictions({
             const finA = resolve(FIN.slotA, FIN.id);
             const finB = resolve(FIN.slotB, FIN.id);
             const runnerUp = champ === finA ? finB : champ === finB ? finA : null;
+
+            function PtsBadge({ pts }: { pts: number | null | undefined }) {
+              if (pts === null || pts === undefined) return null;
+              return pts > 0
+                ? <span className="inline-block ml-1 text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold align-middle">+{pts} pts</span>
+                : <span className="inline-block ml-1 text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full font-bold align-middle">0 pts</span>;
+            }
+
             return (
               <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-center">
                 🏆 Campeão: <strong>{teamById.get(champ)?.name}</strong>
+                <PtsBadge pts={championPoints?.championPoints} />
                 {runnerUp && (
-                  <> · 🥈 Vice: <strong>{teamById.get(runnerUp)?.name}</strong></>
+                  <> · 🥈 Vice: <strong>{teamById.get(runnerUp)?.name}</strong>
+                  <PtsBadge pts={championPoints?.runnerUpPoints} /></>
                 )}
                 {bracketPicks["3P"] && (
-                  <> · 🥉 3º: <strong>{teamById.get(bracketPicks["3P"]!)?.name}</strong></>
+                  <> · 🥉 3º: <strong>{teamById.get(bracketPicks["3P"]!)?.name}</strong>
+                  <PtsBadge pts={championPoints?.thirdPlacePoints} /></>
                 )}
               </div>
             );
