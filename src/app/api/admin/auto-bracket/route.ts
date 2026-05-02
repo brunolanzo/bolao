@@ -136,25 +136,63 @@ export async function POST() {
       return standingsByGroup[g][1]?.teamId ?? null;
     }
 
-    // Greedy assignment of 3rd-place teams to slots:
-    // For each 3rd-place slot (in order), pick the highest-ranked
-    // qualifying third whose group is in the slot's eligible list.
+    // Bipartite matching of 3rd-place teams to slots.
+    // A simple greedy (process slots in order) can fail when a constrained
+    // group (few eligible slots) gets blocked by a less-constrained one.
+    // We use augmenting-path matching so every valid assignment is found.
     const thirdSlotIdxs: number[] = [];
     R32_SLOTS.forEach((s, i) => {
       if (s.home.kind === "3rd" || s.away.kind === "3rd") thirdSlotIdxs.push(i);
     });
 
-    const remainingThirds = [...qualifyingThirds]; // sorted best first
-    const slotAssignments: Record<number, string> = {}; // slotIdx → teamId
+    // Build eligible-slot list for each qualifying third.
+    const thirdEligibleSlots = new Map<string, number[]>(); // teamId → slotIdxs
+    for (const t of qualifyingThirds) {
+      const eligible = thirdSlotIdxs.filter((si) => {
+        const spec = R32_SLOTS[si];
+        const thirdSpec = (spec.home.kind === "3rd" ? spec.home : spec.away) as {
+          kind: "3rd"; eligible: string[];
+        };
+        return thirdSpec.eligible.includes(t.group);
+      });
+      thirdEligibleSlots.set(t.teamId, eligible);
+    }
 
-    for (const slotIdx of thirdSlotIdxs) {
-      const spec = R32_SLOTS[slotIdx];
-      const thirdSpec = (spec.home.kind === "3rd" ? spec.home : spec.away) as { kind: "3rd"; eligible: string[] };
-      const idx = remainingThirds.findIndex((t) => thirdSpec.eligible.includes(t.group));
-      if (idx >= 0) {
-        slotAssignments[slotIdx] = remainingThirds[idx].teamId;
-        remainingThirds.splice(idx, 1);
+    // Augmenting-path DFS: try to assign teamId to some slot,
+    // displacing existing occupants if a valid augmenting path exists.
+    const slotOccupant = new Map<number, string>(); // slotIdx → teamId currently assigned
+    const teamAssignedSlot = new Map<string, number>(); // teamId → slotIdx
+
+    function augment(teamId: string, visited: Set<number>): boolean {
+      for (const slot of thirdEligibleSlots.get(teamId) ?? []) {
+        if (visited.has(slot)) continue;
+        visited.add(slot);
+        const occupant = slotOccupant.get(slot);
+        if (!occupant || augment(occupant, visited)) {
+          slotOccupant.set(slot, teamId);
+          teamAssignedSlot.set(teamId, slot);
+          return true;
+        }
       }
+      return false;
+    }
+
+    // Process thirds sorted by number of eligible slots ascending (most constrained first)
+    // so tightly-constrained teams get priority and aren't blocked.
+    const sortedThirds = [...qualifyingThirds].sort((a, b) => {
+      const aLen = thirdEligibleSlots.get(a.teamId)?.length ?? 0;
+      const bLen = thirdEligibleSlots.get(b.teamId)?.length ?? 0;
+      return aLen - bLen;
+    });
+
+    for (const t of sortedThirds) {
+      augment(t.teamId, new Set());
+    }
+
+    // Convert matching result to the slotAssignments record expected below.
+    const slotAssignments: Record<number, string> = {};
+    for (const [slot, teamId] of slotOccupant) {
+      slotAssignments[slot] = teamId;
     }
 
     // Load R32 matches in order
