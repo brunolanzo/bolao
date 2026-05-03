@@ -17,43 +17,47 @@ export default async function AdminPage() {
   startOf7Days.setDate(now.getDate() - 6);
   startOf7Days.setHours(0, 0, 0, 0);
 
-  const [
-    totalUsers,
-    totalPredictions,
-    finishedMatches,
-    totalMatches,
-    currentPhase,
-    totalViews,
-    viewsToday,
-    viewsWeek,
-    topPages,
-    dailyViews,
-  ] = await Promise.all([
-    prisma.user.count({ where: { role: "user" } }),
-    prisma.matchPrediction.count(),
-    prisma.match.count({ where: { status: "FINISHED" } }),
-    prisma.match.count(),
-    prisma.settings.findUnique({ where: { key: "CURRENT_PHASE" } }),
-    prisma.pageView.count(),
-    prisma.pageView.count({ where: { createdAt: { gte: startOfToday } } }),
-    prisma.pageView.count({ where: { createdAt: { gte: startOf7Days } } }),
-    prisma.pageView.groupBy({
-      by: ["path"],
-      _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
-      take: 5,
-    }),
-    // Last 7 days bucketed by day
-    prisma.$queryRaw<{ day: string; count: number }[]>`
-      SELECT
-        strftime('%Y-%m-%d', createdAt) AS day,
-        COUNT(*) AS count
-      FROM PageView
-      WHERE createdAt >= ${startOf7Days.toISOString()}
-      GROUP BY day
-      ORDER BY day ASC
-    `,
-  ]);
+  const [totalUsers, totalPredictions, finishedMatches, totalMatches, currentPhase] =
+    await Promise.all([
+      prisma.user.count({ where: { role: "user" } }),
+      prisma.matchPrediction.count(),
+      prisma.match.count({ where: { status: "FINISHED" } }),
+      prisma.match.count(),
+      prisma.settings.findUnique({ where: { key: "CURRENT_PHASE" } }),
+    ]);
+
+  // PageView queries wrapped in try/catch — table may not exist yet in production
+  let totalViews = 0;
+  let viewsToday = 0;
+  let viewsWeek = 0;
+  let topPages: { path: string; _count: { id: number } }[] = [];
+  let dailyViews: { day: string; count: number }[] = [];
+  let pageViewReady = true;
+
+  try {
+    [totalViews, viewsToday, viewsWeek, topPages, dailyViews] = await Promise.all([
+      prisma.pageView.count(),
+      prisma.pageView.count({ where: { createdAt: { gte: startOfToday } } }),
+      prisma.pageView.count({ where: { createdAt: { gte: startOf7Days } } }),
+      prisma.pageView.groupBy({
+        by: ["path"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 5,
+      }),
+      prisma.$queryRaw<{ day: string; count: number }[]>`
+        SELECT
+          strftime('%Y-%m-%d', createdAt) AS day,
+          COUNT(*) AS count
+        FROM PageView
+        WHERE createdAt >= ${startOf7Days.toISOString()}
+        GROUP BY day
+        ORDER BY day ASC
+      `,
+    ]);
+  } catch {
+    pageViewReady = false;
+  }
 
   // Build a full 7-day array (fill missing days with 0)
   const dayMap = new Map(dailyViews.map((r) => [r.day, Number(r.count)]));
@@ -112,6 +116,23 @@ export default async function AdminPage() {
       {/* ── Visualizações ── */}
       <div>
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Visualizações</h2>
+
+        {/* Aviso: migração pendente */}
+        {!pageViewReady && (
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
+            <span className="text-amber-500 text-lg leading-none">⚠️</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Tabela de visitas ainda não criada</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Vá em{" "}
+                <a href="/admin/configuracoes" className="underline font-medium">
+                  Configurações → Migrações de Banco
+                </a>{" "}
+                e clique em <strong>Criar tabela PageView</strong>.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Totais */}
         <div className="grid grid-cols-3 gap-4 mb-4">
