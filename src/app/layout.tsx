@@ -4,6 +4,7 @@ import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import Header from "@/components/Header";
 import PrizeBanner from "@/components/PrizeBanner";
+import PageViewTracker from "@/components/PageViewTracker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${inter.className} antialiased bg-white text-black`}>
         <SessionProvider>
+          <PageViewTracker />
           <Header />
           <PrizeBanner />
           <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>

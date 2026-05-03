@@ -10,73 +10,175 @@ export default async function AdminPage() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "admin") redirect("/");
 
-  const totalUsers = await prisma.user.count({ where: { role: "user" } });
-  const totalPredictions = await prisma.matchPrediction.count();
-  const finishedMatches = await prisma.match.count({
-    where: { status: "FINISHED" },
-  });
-  const totalMatches = await prisma.match.count();
-  const currentPhase = await prisma.settings.findUnique({
-    where: { key: "CURRENT_PHASE" },
-  });
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOf7Days = new Date(now);
+  startOf7Days.setDate(now.getDate() - 6);
+  startOf7Days.setHours(0, 0, 0, 0);
+
+  const [
+    totalUsers,
+    totalPredictions,
+    finishedMatches,
+    totalMatches,
+    currentPhase,
+    totalViews,
+    viewsToday,
+    viewsWeek,
+    topPages,
+    dailyViews,
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: "user" } }),
+    prisma.matchPrediction.count(),
+    prisma.match.count({ where: { status: "FINISHED" } }),
+    prisma.match.count(),
+    prisma.settings.findUnique({ where: { key: "CURRENT_PHASE" } }),
+    prisma.pageView.count(),
+    prisma.pageView.count({ where: { createdAt: { gte: startOfToday } } }),
+    prisma.pageView.count({ where: { createdAt: { gte: startOf7Days } } }),
+    prisma.pageView.groupBy({
+      by: ["path"],
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 5,
+    }),
+    // Last 7 days bucketed by day
+    prisma.$queryRaw<{ day: string; count: number }[]>`
+      SELECT
+        strftime('%Y-%m-%d', createdAt) AS day,
+        COUNT(*) AS count
+      FROM PageView
+      WHERE createdAt >= ${startOf7Days.toISOString()}
+      GROUP BY day
+      ORDER BY day ASC
+    `,
+  ]);
+
+  // Build a full 7-day array (fill missing days with 0)
+  const dayMap = new Map(dailyViews.map((r) => [r.day, Number(r.count)]));
+  const last7: { label: string; count: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric" });
+    last7.push({ label, count: dayMap.get(key) ?? 0 });
+  }
+  const maxCount = Math.max(...last7.map((d) => d.count), 1);
+
+  const phaseLabel: Record<string, string> = {
+    GROUP: "Grupos",
+    ROUND_32: "32 avos",
+    ROUND_16: "Oitavas",
+    QUARTERS: "Quartas",
+    SEMIS: "Semis",
+    FINAL: "Final",
+  };
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className="space-y-8">
+      <div>
         <h1 className="text-2xl font-bold tracking-tight">Painel de Administração</h1>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="border border-green-200 rounded-lg p-4">
-          <p className="text-sm text-gray-500">Participantes</p>
-          <p className="text-3xl font-bold mt-1">{totalUsers}</p>
-        </div>
-        <div className="border border-green-200 rounded-lg p-4">
-          <p className="text-sm text-gray-500">Palpites</p>
-          <p className="text-3xl font-bold mt-1">{totalPredictions}</p>
-        </div>
-        <div className="border border-green-200 rounded-lg p-4">
-          <p className="text-sm text-gray-500">Jogos Finalizados</p>
-          <p className="text-3xl font-bold mt-1">
-            {finishedMatches}/{totalMatches}
-          </p>
-        </div>
-        <div className="border border-green-200 rounded-lg p-4">
-          <p className="text-sm text-gray-500">Fase Atual</p>
-          <p className="text-lg font-bold mt-1">{currentPhase?.value || "GROUP"}</p>
+      {/* ── Bolão stats ── */}
+      <div>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Bolão</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Participantes</p>
+            <p className="text-3xl font-bold mt-1">{totalUsers}</p>
+          </div>
+          <div className="border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Palpites</p>
+            <p className="text-3xl font-bold mt-1">{totalPredictions}</p>
+          </div>
+          <div className="border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Jogos Finalizados</p>
+            <p className="text-3xl font-bold mt-1">
+              {finishedMatches}/{totalMatches}
+            </p>
+          </div>
+          <div className="border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Fase Atual</p>
+            <p className="text-lg font-bold mt-1">
+              {phaseLabel[currentPhase?.value ?? "GROUP"] ?? currentPhase?.value ?? "GROUP"}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link
-          href="/admin/resultados"
-          className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors"
-        >
-          <h3 className="font-bold mb-1">Atualizar Resultados</h3>
-          <p className="text-sm text-gray-500">
-            Inserir ou atualizar placares dos jogos
-          </p>
-        </Link>
-        <Link
-          href="/admin/pagamentos"
-          className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors"
-        >
-          <h3 className="font-bold mb-1">Pagamentos</h3>
-          <p className="text-sm text-gray-500">
-            Controlar pagamentos e dados bancários
-          </p>
-        </Link>
-        <Link
-          href="/admin/configuracoes"
-          className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors"
-        >
-          <h3 className="font-bold mb-1">Configurações</h3>
-          <p className="text-sm text-gray-500">
-            Deadlines, usuários e configurações gerais
-          </p>
-        </Link>
+      {/* ── Visualizações ── */}
+      <div>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Visualizações</h2>
+
+        {/* Totais */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="border border-blue-100 bg-blue-50 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Total</p>
+            <p className="text-3xl font-bold mt-1 text-blue-700">{totalViews.toLocaleString("pt-BR")}</p>
+          </div>
+          <div className="border border-blue-100 bg-blue-50 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Hoje</p>
+            <p className="text-3xl font-bold mt-1 text-blue-700">{viewsToday.toLocaleString("pt-BR")}</p>
+          </div>
+          <div className="border border-blue-100 bg-blue-50 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Últimos 7 dias</p>
+            <p className="text-3xl font-bold mt-1 text-blue-700">{viewsWeek.toLocaleString("pt-BR")}</p>
+          </div>
+        </div>
+
+        {/* Gráfico de barras — últimos 7 dias */}
+        <div className="border border-gray-200 rounded-lg p-4 mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Visitas por dia</p>
+          <div className="flex items-end gap-1.5 h-20">
+            {last7.map(({ label, count }) => (
+              <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-[10px] text-gray-500 font-medium">{count > 0 ? count : ""}</span>
+                <div
+                  className="w-full rounded-t bg-blue-400 transition-all"
+                  style={{ height: `${Math.max((count / maxCount) * 56, count > 0 ? 4 : 2)}px` }}
+                />
+                <span className="text-[9px] text-gray-400 leading-none text-center">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top páginas */}
+        {topPages.length > 0 && (
+          <div className="border border-gray-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Páginas mais visitadas</p>
+            <div className="space-y-2">
+              {topPages.map((p) => (
+                <div key={p.path} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 font-mono text-xs truncate">{p.path || "/"}</span>
+                  <span className="font-semibold text-gray-800 ml-4 shrink-0">{p._count.id.toLocaleString("pt-BR")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Quick Links ── */}
+      <div>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Ações</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/admin/resultados" className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors">
+            <h3 className="font-bold mb-1">Atualizar Resultados</h3>
+            <p className="text-sm text-gray-500">Inserir ou atualizar placares dos jogos</p>
+          </Link>
+          <Link href="/admin/pagamentos" className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors">
+            <h3 className="font-bold mb-1">Pagamentos</h3>
+            <p className="text-sm text-gray-500">Controlar pagamentos e dados bancários</p>
+          </Link>
+          <Link href="/admin/configuracoes" className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors">
+            <h3 className="font-bold mb-1">Configurações</h3>
+            <p className="text-sm text-gray-500">Deadlines, usuários e configurações gerais</p>
+          </Link>
+        </div>
       </div>
     </div>
   );
