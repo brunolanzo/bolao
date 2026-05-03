@@ -344,6 +344,14 @@ INSERT OR IGNORE INTO "User" (id, name, email, password, role, createdAt, update
   '2026-01-01T00:00:00.000Z'
 );
 
+CREATE TABLE IF NOT EXISTS "PageView" (
+  id        TEXT PRIMARY KEY,
+  path      TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS "PageView_createdAt_idx" ON "PageView"("createdAt");
+CREATE INDEX IF NOT EXISTS "PageView_path_idx"      ON "PageView"("path");
+
 -- ============================================================
 -- DEFAULT SETTINGS
 -- ============================================================

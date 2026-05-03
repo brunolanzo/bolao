@@ -43,6 +43,8 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
   const [resetConfirm, setResetConfirm] = useState("");
   const [resetting, setResetting] = useState(false);
   const [resetDone, setResetDone] = useState<string | null>(null);
+  const [migrating, setMigrating] = useState(false);
+  const [migrateDone, setMigrateDone] = useState<string | null>(null);
 
   async function saveSettings() {
     setSaving(true);
@@ -55,6 +57,20 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
       alert("Configurações salvas!");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function migratePageView() {
+    setMigrating(true);
+    setMigrateDone(null);
+    try {
+      const res = await fetch("/api/admin/migrate-pageview", { method: "POST" });
+      const data = await res.json();
+      setMigrateDone(data.message ?? data.error ?? "Concluído.");
+    } catch {
+      setMigrateDone("Erro ao executar a migração.");
+    } finally {
+      setMigrating(false);
     }
   }
 
@@ -176,6 +192,27 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
               {resetting ? "Executando reset…" : "🚀 Executar Reset e Preparar Launch"}
             </button>
           </div>
+        )}
+      </div>
+
+      {/* ── Migrações de banco ── */}
+      <div className="border border-gray-200 rounded-lg p-4">
+        <h2 className="font-bold mb-1">Migrações de Banco</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Execute uma vez após cada atualização que adiciona novas tabelas ao banco de produção.
+        </p>
+        {migrateDone ? (
+          <p className="text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+            ✅ {migrateDone}
+          </p>
+        ) : (
+          <button
+            onClick={migratePageView}
+            disabled={migrating}
+            className="bg-gray-800 text-white text-sm px-4 py-2 rounded-md hover:bg-gray-700 disabled:opacity-50"
+          >
+            {migrating ? "Executando…" : "Criar tabela PageView (contador de visitas)"}
+          </button>
         )}
       </div>
 
