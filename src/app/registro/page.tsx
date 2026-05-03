@@ -65,7 +65,7 @@ export default function RegistroPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Bolão Copa 2026</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Nosso Bolão 2026</h1>
           <p className="text-gray-500 mt-2">Crie sua conta</p>
         </div>
 
