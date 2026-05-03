@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Bolão Copa 2026",
-  description: "Bolão da Copa do Mundo FIFA 2026",
+  title: "Nosso Bolão 2026",
+  description: "Bolão fechado da Copa do Mundo FIFA 2026 — só para amigos indicados.",
 };
 
 export default function RootLayout({

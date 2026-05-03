@@ -111,7 +111,7 @@ export default async function RegulamentoPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-2">Regulamento</h1>
         <p className="text-gray-500">
-          Leia com atenção as regras do Bolão Copa 2026.
+          Leia com atenção as regras do Nosso Bolão 2026.
         </p>
       </div>
 
@@ -143,7 +143,7 @@ export default async function RegulamentoPage() {
       </div>
 
       <div className="mt-8 p-4 bg-[#006B2B] text-white rounded-xl text-sm text-center">
-        <p className="font-semibold mb-1">Bolão Copa do Mundo 2026</p>
+        <p className="font-semibold mb-1">Nosso Bolão 2026</p>
         <p className="text-green-200 text-xs">Boa sorte a todos os participantes!</p>
       </div>
     </div>

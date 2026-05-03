@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import type { ReactNode } from "react";
 
 /* ─────────────────────────────────────────────────────────────────
@@ -498,6 +499,9 @@ export default async function Home() {
   const session = await getServerSession(authOptions);
   if (session) redirect(session.user.role === "admin" ? "/admin/resultados" : "/dashboard");
 
+  const userCount = await prisma.user.count({ where: { role: "user" } });
+  const prizePool = userCount * 47;
+
   return (
     <div className="-mt-6 -mx-4">
 
@@ -529,15 +533,30 @@ export default async function Home() {
             className="font-black leading-[0.88] tracking-tight mb-5"
             style={{ fontSize: "clamp(3.25rem, 11vw, 7rem)" }}
           >
-            Bolão Copa
+            Nosso Bolão
             <br />
             <span className="text-[#FFDF00]">2026</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-green-200/65 text-lg sm:text-xl mb-10 max-w-sm mx-auto leading-relaxed">
-            Palpites, ranking ao vivo e disputa com amigos.
+          <p className="text-green-200/65 text-lg sm:text-xl mb-6 max-w-sm mx-auto leading-relaxed">
+            Bolão fechado para amigos convidados — palpites, ranking ao vivo e muita disputa.
           </p>
+
+          {/* Prize strip */}
+          {userCount > 0 && (
+            <div className="inline-flex items-center gap-2.5 bg-[#FFDF00]/10 border border-[#FFDF00]/25 rounded-full px-5 py-2 mb-10">
+              <span className="text-[#FFDF00] text-base leading-none">💰</span>
+              <span className="text-sm font-semibold text-[#FFDF00]">
+                Prêmio atual:{" "}
+                <span className="font-black">
+                  R$ {prizePool.toLocaleString("pt-BR")}
+                </span>
+              </span>
+              <span className="text-white/30 text-xs">·</span>
+              <span className="text-xs text-white/50">{userCount} apostadores</span>
+            </div>
+          )}
 
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-14">
@@ -833,7 +852,7 @@ export default async function Home() {
       {/* ── Footer ───────────────────────────────────── */}
       <footer className="border-t border-gray-100 py-10 px-4 bg-white">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm font-bold text-[#006B2B] tracking-tight">Bolão Copa 2026</p>
+          <p className="text-sm font-bold text-[#006B2B] tracking-tight">Nosso Bolão 2026</p>
           <div className="flex items-center gap-6 text-xs text-gray-400">
             <Link href="/login" className="hover:text-[#006B2B] transition-colors">Entrar</Link>
             <Link href="/registro" className="hover:text-[#006B2B] transition-colors">Criar Conta</Link>

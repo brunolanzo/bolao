@@ -38,7 +38,7 @@ export default function Header() {
           href={session ? (session.user.role === "admin" ? "/admin/resultados" : "/dashboard") : "/"}
           className="text-lg font-bold tracking-tight text-[#006B2B]"
         >
-          Bolão Copa 2026
+          Nosso Bolão 2026
         </Link>
 
         {session ? (
