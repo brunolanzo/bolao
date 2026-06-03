@@ -187,6 +187,10 @@ export default async function AdminPage() {
       <div>
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Ações</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/admin/participantes" className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors">
+            <h3 className="font-bold mb-1">Participantes</h3>
+            <p className="text-sm text-gray-500">Pendências de palpites, pagamento e exclusão</p>
+          </Link>
           <Link href="/admin/resultados" className="border border-green-200 rounded-lg p-6 hover:border-[#009C3B] transition-colors">
             <h3 className="font-bold mb-1">Atualizar Resultados</h3>
             <p className="text-sm text-gray-500">Inserir ou atualizar placares dos jogos</p>
