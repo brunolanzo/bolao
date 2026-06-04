@@ -20,11 +20,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    // Normalize email to lowercase so new registrations are always consistent.
+    // Existing users with mixed-case emails are unaffected (login handles them via LOWER()).
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (existingUser) {
+    const existing = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "User" WHERE LOWER(email) = ${normalizedEmail} LIMIT 1
+    `;
+
+    if (existing.length > 0) {
       return NextResponse.json(
         { error: "Este email já está cadastrado" },
         { status: 400 }
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
       },
     });

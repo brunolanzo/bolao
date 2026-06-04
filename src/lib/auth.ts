@@ -16,9 +16,14 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        // Case-insensitive lookup — SQLite doesn't support Prisma's mode:'insensitive',
+        // so we use LOWER() via raw SQL. Existing users with mixed-case emails still match.
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+        const rows = await prisma.$queryRaw<
+          { id: string; name: string; email: string; password: string; role: string }[]
+        >`SELECT id, name, email, password, role FROM "User" WHERE LOWER(email) = ${normalizedEmail} LIMIT 1`;
+
+        const user = rows[0] ?? null;
 
         if (!user) {
           return null;
