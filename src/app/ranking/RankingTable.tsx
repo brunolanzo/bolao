@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatName } from "@/lib/formatName";
 
 interface RankingEntry {
   id: string;
@@ -29,6 +30,43 @@ interface Props {
   isGroupLocked: boolean;
 }
 
+function CopyRankingButton({ ranking }: { ranking: RankingEntry[] }) {
+  const [copied, setCopied] = useState(false);
+
+  function buildText() {
+    const medals = ["🥇", "🥈", "🥉"];
+    const lines = ranking.map((u, i) => {
+      const pos = medals[i] ?? `${i + 1}.`;
+      return `${pos} ${formatName(u.name)} — ${u.totalPoints} pts`;
+    });
+    return `🏆 *Ranking — Nosso Bolão 2026*\n\n${lines.join("\n")}`;
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(buildText());
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = buildText();
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }
+
+  return (
+    <button
+      onClick={copy}
+      className="text-xs font-medium border border-green-300 text-green-700 px-3 py-1.5 rounded-md hover:bg-green-50 transition-colors"
+    >
+      {copied ? "✓ Copiado!" : "📋 Copiar pro WhatsApp"}
+    </button>
+  );
+}
+
 export default function RankingTable({ ranking, currentUserId, isGroupLocked }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -42,6 +80,11 @@ export default function RankingTable({ ranking, currentUserId, isGroupLocked }: 
 
   return (
     <>
+      {/* Copy to WhatsApp */}
+      <div className="mb-4 flex justify-end">
+        <CopyRankingButton ranking={ranking} />
+      </div>
+
       {/* Transparency hint — only after lock */}
       {isGroupLocked && (
         <div className="mb-4 flex items-center gap-2 text-sm text-[#006B2B] bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
@@ -146,10 +189,10 @@ export default function RankingTable({ ranking, currentUserId, isGroupLocked }: 
                         href={`/ranking/${user.id}`}
                         className={`hover:text-[#006B2B] hover:underline transition-colors ${i < 3 ? "font-medium" : ""}`}
                       >
-                        {user.name}
+                        {formatName(user.name)}
                       </Link>
                     ) : (
-                      <span className={i < 3 ? "font-medium" : ""}>{user.name}</span>
+                      <span className={i < 3 ? "font-medium" : ""}>{formatName(user.name)}</span>
                     )}
                     {user.id === currentUserId && (
                       <span className="text-xs text-gray-400 ml-1">(você)</span>
@@ -233,7 +276,7 @@ export default function RankingTable({ ranking, currentUserId, isGroupLocked }: 
                   <div>
                     <div className="flex items-center gap-1">
                       <span className={`text-sm ${i < 3 ? "font-bold" : ""}`}>
-                        {user.name}
+                        {formatName(user.name)}
                       </span>
                       {isMe && (
                         <span className="text-xs text-gray-400">(você)</span>
