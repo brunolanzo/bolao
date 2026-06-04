@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { THIRD_PLACE_TABLE } from "@/lib/thirdPlaceTable";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -213,10 +214,9 @@ export default function ClassificationPredictions({
 }: Props) {
   const [tab, setTab] = useState<"groups" | "bracket">("groups");
 
-  // Bracket state (only what's editable now)
-  const [thirdSlots, setThirdSlots] = useState<ThirdSlots>(
-    initialBracketState.thirdSlots ?? {},
-  );
+  // Bracket state. Third-place slots are NO LONGER manual — they are assigned
+  // automatically from the official FIFA 2026 combinations table (see autoThirdSlots).
+  // We keep the user's winner picks editable.
   const [bracketPicks, setBracketPicks] = useState<BracketPicks>(
     initialBracketState.bracketPicks ?? {},
   );
@@ -323,6 +323,39 @@ export default function ClassificationPredictions({
     return new Set(thirds.slice(0, 8).map((s) => s.teamId));
   }, [standingsByGroup, teamById]);
 
+  // ─── Automatic 3rd-place slot assignment (official FIFA 2026 table) ────────
+  // Once all 8 qualifying thirds are known, the official "Combinações de partidas"
+  // table (Anexo C do regulamento) determines exactly which group's 3rd plays in
+  // each Round-of-32 slot. No manual choice — this eliminates dead-end states.
+  const autoThirdSlots: ThirdSlots = useMemo(() => {
+    if (qualifiedThirds.size !== 8) return {};
+
+    // Each group's 3rd-placed team (by the user's predicted standings).
+    const thirdTeamByGroup = new Map<string, string>();
+    for (const g of GROUPS) {
+      const s = standingsByGroup[g];
+      if (s && s[2]) thirdTeamByGroup.set(g, s[2].teamId);
+    }
+
+    // The 8 groups whose 3rd qualified.
+    const qualGroups: string[] = [];
+    for (const [g, tid] of thirdTeamByGroup) {
+      if (qualifiedThirds.has(tid)) qualGroups.push(g);
+    }
+    if (qualGroups.length !== 8) return {};
+
+    const key = [...qualGroups].sort().join("");
+    const row = THIRD_PLACE_TABLE[key];
+    if (!row) return {};
+
+    // row: matchId -> group letter whose 3rd plays that slot.
+    const result: ThirdSlots = {};
+    for (const [matchId, groupLetter] of Object.entries(row)) {
+      result[matchId] = thirdTeamByGroup.get(groupLetter) ?? null;
+    }
+    return result;
+  }, [qualifiedThirds, standingsByGroup]);
+
   // Track per-group prediction completeness
   const incompleteGroups = useMemo(() => {
     const result: string[] = [];
@@ -337,22 +370,7 @@ export default function ClassificationPredictions({
 
   // Resolve slot helper bound to current state
   const resolve = (slot: Slot, matchId: string) =>
-    resolveSlot(slot, matchId, groupPicks, thirdSlots, bracketPicks);
-
-  // ─── Third-slot assignment ───────────────────────────────────────────────────
-
-  function assignThirdSlot(matchId: string, teamId: string) {
-    if (isLocked) return;
-    setThirdSlots((prev) => {
-      const next = { ...prev };
-      // Remove this team from any other slot
-      for (const k of Object.keys(next)) {
-        if (next[k] === teamId && k !== matchId) next[k] = null;
-      }
-      next[matchId] = teamId || null;
-      return next;
-    });
-  }
+    resolveSlot(slot, matchId, groupPicks, autoThirdSlots, bracketPicks);
 
   // ─── Bracket picks ───────────────────────────────────────────────────────────
 
@@ -416,7 +434,7 @@ export default function ClassificationPredictions({
         ? { championTeamId: finalWinner, runnerUpTeamId: finalLoser, thirdPlaceTeamId: thirdWinner }
         : undefined;
 
-    const bracketState: BracketState = { thirdSlots, bracketPicks };
+    const bracketState: BracketState = { thirdSlots: autoThirdSlots, bracketPicks };
 
     try {
       const res = await fetch("/api/bracket", {
@@ -499,19 +517,8 @@ export default function ClassificationPredictions({
       ? (match.slotA as ThirdSlotT)
       : match.slotB.kind === "3rd" ? (match.slotB as ThirdSlotT) : null;
 
-    // Eligible thirds for this match (from qualified pool)
-    const eligibleThirds = thirdSlot
-      ? Array.from(qualifiedThirds)
-          .map((id) => teamById.get(id))
-          .filter((t): t is Team => !!t && thirdSlot.eligible.includes(t.groupLabel))
-          // Also don't show if already assigned to another slot
-          .filter((t) => {
-            const assignedMatch = Object.entries(thirdSlots).find(
-              ([mid, tid]) => tid === t.id && mid !== match.id,
-            );
-            return !assignedMatch;
-          })
-      : [];
+    // Is the auto-assigned third for this slot already known?
+    const thirdAssigned = thirdSlot ? !!autoThirdSlots[match.id] : false;
 
     const sizeClasses = small
       ? "text-[11px] px-2 py-1.5"
@@ -565,29 +572,17 @@ export default function ClassificationPredictions({
           )}
         </div>
 
-        {/* 3rd-place slot selector */}
+        {/* 3rd-place slot indicator (assigned automatically by the official table) */}
         {thirdSlot && (
-          <div>
-            <div className="text-[9px] text-gray-400 mb-0.5">
-              3º ({thirdSlot.eligible.join("/")})
-            </div>
-            <select
-              value={thirdSlots[match.id] ?? ""}
-              onChange={(e) => assignThirdSlot(match.id, e.target.value)}
-              disabled={isLocked}
-              className="w-full text-[10px] border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:opacity-50 disabled:bg-gray-100"
-            >
-              <option value="">— selecione —</option>
-              {eligibleThirds.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
-              ))}
-              {/* Keep current if it's no longer in the eligible list */}
-              {thirdSlots[match.id] && !eligibleThirds.find((t) => t.id === thirdSlots[match.id]) && (
-                <option value={thirdSlots[match.id]!}>
-                  {teamById.get(thirdSlots[match.id]!)?.name ?? "?"}
-                </option>
-              )}
-            </select>
+          <div className="text-[8px] text-gray-400 flex items-center gap-1">
+            <span className="inline-block px-1 py-px rounded bg-gray-100 text-gray-500 font-medium">
+              3º lugar
+            </span>
+            {thirdAssigned ? (
+              <span>definido automaticamente</span>
+            ) : (
+              <span className="text-amber-500">aguardando grupos</span>
+            )}
           </div>
         )}
 
@@ -803,10 +798,18 @@ export default function ClassificationPredictions({
       {/* ── TAB 2: Chaveamento ── */}
       {tab === "bracket" && (
         <div className="space-y-6">
-          <p className="text-xs text-gray-500">
-            Escolha o vencedor de cada confronto. Os times são determinados automaticamente pelas suas previsões da fase de grupos.
-            Nos jogos com slot de <strong>3º lugar</strong>, selecione qual classificado ocupa aquela vaga.
-          </p>
+          <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-3 flex items-start gap-2">
+            <svg className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-xs text-gray-700 leading-relaxed">
+              Aqui você só precisa <strong>escolher o vencedor de cada confronto</strong> — clique no time que você acha que avança.
+              Os adversários são montados automaticamente a partir dos seus palpites de grupos.
+              <br />
+              As vagas de <strong>3º lugar</strong> são preenchidas <strong>automaticamente</strong> conforme a tabela oficial da FIFA
+              (Anexo C do regulamento), assim que você definir todos os jogos dos 12 grupos. Você não precisa escolher os terceiros manualmente.
+            </div>
+          </div>
 
           {(() => {
             const totalEarned = Object.values(phasePoints).reduce((a, p) => a + p.earned, 0);
