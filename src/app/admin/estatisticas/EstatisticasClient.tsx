@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { RankedTeam, MatchOption } from "./page";
+import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser } from "./page";
+import type { TeamDistribution } from "@/app/api/admin/stats/team/route";
+import { formatName } from "@/lib/formatName";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -11,7 +13,6 @@ function CopyButton({ text }: { text: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // Fallback for older browsers
       const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
@@ -42,6 +43,115 @@ function rankingToText(title: string, ranking: RankedTeam[]): string {
     .map((r, i) => `${medal(i)} ${r.name} — ${r.count} ${r.count === 1 ? "aposta" : "apostas"} (${r.pct}%)`);
   return `${title}\n\n${lines.join("\n")}`;
 }
+
+// --- Pending lists ---
+
+function PendingListCard({
+  title,
+  emoji,
+  defaultOpen,
+  copyText,
+  children,
+}: {
+  title: string;
+  emoji: string;
+  defaultOpen?: boolean;
+  copyText: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? true);
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-left">
+          <span className="text-gray-400 text-xs">{open ? "▼" : "▶"}</span>
+          <h3 className="font-bold">{emoji} {title}</h3>
+        </button>
+        <CopyButton text={copyText} />
+      </div>
+      {open && children}
+    </div>
+  );
+}
+
+function PendingSection({
+  unpaidUsers,
+  groupPendingUsers,
+  bracketPendingUsers,
+  groupTotal,
+}: {
+  unpaidUsers: string[];
+  groupPendingUsers: GroupPendingUser[];
+  bracketPendingUsers: string[];
+  groupTotal: number;
+}) {
+  const unpaidText =
+    unpaidUsers.length === 0
+      ? "✅ *Pagamentos — Nosso Bolão 2026*\n\nTodos os participantes já pagaram!"
+      : `💸 *Pagamento pendente — Nosso Bolão 2026*\n\n${unpaidUsers.map((n) => `• ${formatName(n)}`).join("\n")}`;
+
+  const groupText =
+    groupPendingUsers.length === 0
+      ? "✅ *Fase de grupos — Nosso Bolão 2026*\n\nTodos terminaram de preencher!"
+      : `⏳ *Fase de grupos incompleta — Nosso Bolão 2026*\n\n${groupPendingUsers.map((u) => `• ${formatName(u.name)} (${u.done}/${groupTotal})`).join("\n")}`;
+
+  const bracketText =
+    bracketPendingUsers.length === 0
+      ? "✅ *Chaveamento/campeão — Nosso Bolão 2026*\n\nTodos preencheram o chaveamento!"
+      : `🗓️ *Chaveamento/campeão pendente — Nosso Bolão 2026*\n\n${bracketPendingUsers.map((n) => `• ${formatName(n)}`).join("\n")}`;
+
+  return (
+    <div className="space-y-3">
+      <PendingListCard title="Pagamento pendente" emoji="💸" copyText={unpaidText}>
+        {unpaidUsers.length === 0 ? (
+          <p className="text-sm text-green-600 font-medium">✅ Todos pagaram!</p>
+        ) : (
+          <ul className="space-y-1">
+            {unpaidUsers.map((n) => (
+              <li key={n} className="text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                {formatName(n)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </PendingListCard>
+
+      <PendingListCard title="Fase de grupos incompleta" emoji="⏳" copyText={groupText} defaultOpen={false}>
+        {groupPendingUsers.length === 0 ? (
+          <p className="text-sm text-green-600 font-medium">✅ Todos terminaram os grupos!</p>
+        ) : (
+          <ul className="space-y-1">
+            {groupPendingUsers.map((u) => (
+              <li key={u.name} className="text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                <span>{formatName(u.name)}</span>
+                <span className="text-xs text-gray-400 ml-auto">{u.done}/{groupTotal}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PendingListCard>
+
+      <PendingListCard title="Grupos prontos, sem chaveamento" emoji="🗓️" copyText={bracketText} defaultOpen={false}>
+        {bracketPendingUsers.length === 0 ? (
+          <p className="text-sm text-green-600 font-medium">✅ Todos preencheram o chaveamento!</p>
+        ) : (
+          <ul className="space-y-1">
+            {bracketPendingUsers.map((n) => (
+              <li key={n} className="text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
+                {formatName(n)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </PendingListCard>
+    </div>
+  );
+}
+
+// --- Ranking cards ---
 
 function RankingCard({
   title,
@@ -100,6 +210,108 @@ function RankingCard({
   );
 }
 
+// --- Team analyzer ---
+
+const STAGES: { key: keyof TeamDistribution; label: string; emoji: string; color: string }[] = [
+  { key: "champion",   label: "Campeão",          emoji: "🏆", color: "bg-yellow-400" },
+  { key: "runnerUp",   label: "Vice-campeão",      emoji: "🥈", color: "bg-gray-300"  },
+  { key: "thirdPlace", label: "3º Lugar",          emoji: "🥉", color: "bg-orange-300"},
+  { key: "fourthPlace",label: "4º Lugar",          emoji: "4️⃣", color: "bg-blue-300"  },
+  { key: "quarters",   label: "Quartas de final",  emoji: "⚡", color: "bg-green-400" },
+  { key: "round16",    label: "Oitavas de final",  emoji: "🔵", color: "bg-blue-400"  },
+  { key: "round32",    label: "2ª Fase (16 avos)", emoji: "🔹", color: "bg-indigo-300"},
+  { key: "groups",     label: "Fase de grupos",    emoji: "❌", color: "bg-red-300"   },
+];
+
+function pct(n: number, total: number): number {
+  return total > 0 ? Math.round((n / total) * 100) : 0;
+}
+
+interface TeamStats {
+  team: { id: string; name: string };
+  total: number;
+  distribution: TeamDistribution;
+}
+
+function TeamAnalyzer({ teams }: { teams: TeamOption[] }) {
+  const [selected, setSelected] = useState("");
+  const [stats, setStats] = useState<TeamStats | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function load(teamId: string) {
+    setSelected(teamId);
+    setStats(null);
+    if (!teamId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/stats/team?teamId=${teamId}`);
+      const data = await res.json();
+      if (res.ok) setStats(data);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function waText(s: TeamStats): string {
+    const lines = STAGES
+      .filter((st) => s.distribution[st.key] > 0)
+      .map((st) => {
+        const n = s.distribution[st.key];
+        return `${st.emoji} ${st.label}: ${n} (${pct(n, s.total)}%)`;
+      });
+    return `⚽ *${s.team.name} — Até onde vai? (Nosso Bolão 2026)*\n\n${lines.join("\n")}`;
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <h3 className="font-bold mb-3">⚽ Análise por seleção</h3>
+      <select
+        value={selected}
+        onChange={(e) => load(e.target.value)}
+        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black mb-4"
+      >
+        <option value="">Selecione uma seleção…</option>
+        {teams.map((t) => (
+          <option key={t.id} value={t.id}>{t.name}</option>
+        ))}
+      </select>
+
+      {loading && <p className="text-sm text-gray-400">Carregando…</p>}
+
+      {stats && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-gray-500">{stats.total} participantes</span>
+            <CopyButton text={waText(stats)} />
+          </div>
+          <div className="space-y-2">
+            {STAGES.map((st) => {
+              const n = stats.distribution[st.key];
+              return (
+                <div key={st.key} className="flex items-center gap-3 text-sm">
+                  <span className="w-5 shrink-0 text-center text-base leading-none">{st.emoji}</span>
+                  <span className="w-36 shrink-0 truncate">{st.label}</span>
+                  <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className={`${st.color} h-full rounded-full transition-all`}
+                      style={{ width: `${pct(n, stats.total)}%` }}
+                    />
+                  </div>
+                  <span className="w-20 shrink-0 text-right text-gray-600 text-xs">
+                    {n} · {pct(n, stats.total)}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Match analyzer ---
+
 interface MatchStats {
   match: {
     phase: string;
@@ -116,10 +328,6 @@ interface MatchStats {
   isFinished: boolean;
   realScore: string | null;
   exactHits: number;
-}
-
-function pct(n: number, total: number): number {
-  return total > 0 ? Math.round((n / total) * 100) : 0;
 }
 
 function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
@@ -150,9 +358,7 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
     txt += `🛫 ${m.awayTeam}: ${d.awayWin} (${pct(d.awayWin, total)}%)\n`;
     if (s.topScores.length > 0) {
       txt += `\n🎯 Placares mais apostados:\n`;
-      txt += s.topScores
-        .map((t) => `• ${t.score} (${t.count}×)`)
-        .join("\n");
+      txt += s.topScores.map((t) => `• ${t.score} (${t.count}×)`).join("\n");
     }
     if (s.isFinished) {
       txt += `\n\n✅ Resultado real: ${s.realScore}\n`;
@@ -171,9 +377,7 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
       >
         <option value="">Selecione um jogo…</option>
         {matchOptions.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
+          <option key={m.id} value={m.id}>{m.label}</option>
         ))}
       </select>
 
@@ -190,7 +394,6 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
                 <CopyButton text={waText(stats)} />
               </div>
 
-              {/* Distribuição vitória/empate/vitória */}
               <div className="space-y-2">
                 {[
                   { label: stats.match.homeTeam, val: stats.distribution.homeWin, color: "bg-green-500" },
@@ -212,17 +415,13 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
                 ))}
               </div>
 
-              {/* Placares mais apostados */}
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                   Placares mais apostados
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {stats.topScores.map((t) => (
-                    <span
-                      key={t.score}
-                      className="text-sm border border-gray-200 rounded-md px-2.5 py-1 bg-gray-50"
-                    >
+                    <span key={t.score} className="text-sm border border-gray-200 rounded-md px-2.5 py-1 bg-gray-50">
                       <strong>{t.score}</strong>{" "}
                       <span className="text-gray-400 text-xs">×{t.count}</span>
                     </span>
@@ -230,7 +429,6 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
                 </div>
               </div>
 
-              {/* Resultado real + cravadas */}
               {stats.isFinished && (
                 <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
                   <p className="text-sm">
@@ -254,6 +452,8 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
   );
 }
 
+// --- Main export ---
+
 export default function EstatisticasClient({
   champions,
   runnersUp,
@@ -261,6 +461,11 @@ export default function EstatisticasClient({
   popularScores,
   totalPreds,
   matchOptions,
+  teams,
+  unpaidUsers,
+  groupPendingUsers,
+  bracketPendingUsers,
+  groupTotal,
 }: {
   champions: { ranking: RankedTeam[]; total: number };
   runnersUp: { ranking: RankedTeam[]; total: number };
@@ -268,6 +473,11 @@ export default function EstatisticasClient({
   popularScores: { score: string; count: number; pct: number }[];
   totalPreds: number;
   matchOptions: MatchOption[];
+  teams: TeamOption[];
+  unpaidUsers: string[];
+  groupPendingUsers: GroupPendingUser[];
+  bracketPendingUsers: string[];
+  groupTotal: number;
 }) {
   const popularText =
     `🎯 *Placares mais apostados (geral) — Nosso Bolão 2026*\n\n` +
@@ -277,6 +487,27 @@ export default function EstatisticasClient({
 
   return (
     <div className="space-y-8">
+      {/* Pendências */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Pendências
+        </h2>
+        <PendingSection
+          unpaidUsers={unpaidUsers}
+          groupPendingUsers={groupPendingUsers}
+          bracketPendingUsers={bracketPendingUsers}
+          groupTotal={groupTotal}
+        />
+      </section>
+
+      {/* Análise por seleção */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Até onde vai a seleção?
+        </h2>
+        <TeamAnalyzer teams={teams} />
+      </section>
+
       {/* Campeões */}
       <section className="space-y-3">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -302,7 +533,10 @@ export default function EstatisticasClient({
         </h2>
         <div className="border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between gap-3 mb-3">
-            <h3 className="font-bold">🎯 Placares mais apostados (geral)</h3>
+            <div>
+              <h3 className="font-bold">🎯 Placares mais apostados (geral)</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Mandante ou visitante contam como o mesmo placar</p>
+            </div>
             {popularScores.length > 0 && <CopyButton text={popularText} />}
           </div>
           {popularScores.length === 0 ? (

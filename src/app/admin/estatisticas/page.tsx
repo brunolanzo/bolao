@@ -19,6 +19,16 @@ export interface MatchOption {
   status: string;
 }
 
+export interface TeamOption {
+  id: string;
+  name: string;
+}
+
+export interface GroupPendingUser {
+  name: string;
+  done: number;
+}
+
 async function rankPicks(
   field: "championTeamId" | "runnerUpTeamId" | "thirdPlaceTeamId",
   teamName: Map<string, string>
@@ -45,30 +55,83 @@ export default async function EstatisticasPage() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "admin") redirect("/");
 
-  const teams = await prisma.team.findMany({ select: { id: true, name: true } });
+  const teams = await prisma.team.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
 
+  // --- Pending users ---
+  const groupMatches = await prisma.match.findMany({
+    where: { phase: "GROUP", homeTeamId: { not: null }, awayTeamId: { not: null } },
+    select: { id: true },
+  });
+  const groupMatchIds = groupMatches.map((m) => m.id);
+  const groupTotal = groupMatchIds.length;
+
+  const predCounts =
+    groupMatchIds.length > 0
+      ? await prisma.matchPrediction.groupBy({
+          by: ["userId"],
+          where: { matchId: { in: groupMatchIds } },
+          _count: { id: true },
+        })
+      : [];
+  const predCountMap = new Map(predCounts.map((p) => [p.userId, p._count.id]));
+
+  const allUsers = await prisma.user.findMany({
+    where: { role: "user" },
+    orderBy: { name: "asc" },
+    include: {
+      payment: { select: { paid: true } },
+      championPrediction: { select: { id: true } },
+    },
+  });
+
+  const unpaidUsers: string[] = allUsers
+    .filter((u) => !(u.payment?.paid ?? false))
+    .map((u) => u.name);
+
+  const groupPendingUsers: GroupPendingUser[] = allUsers
+    .filter((u) => (predCountMap.get(u.id) ?? 0) < groupTotal)
+    .map((u) => ({ name: u.name, done: predCountMap.get(u.id) ?? 0 }));
+
+  const bracketPendingUsers: string[] = allUsers
+    .filter((u) => {
+      const groupDone = groupTotal > 0 && (predCountMap.get(u.id) ?? 0) >= groupTotal;
+      return groupDone && u.championPrediction === null;
+    })
+    .map((u) => u.name);
+
+  // --- Champion rankings ---
   const [champions, runnersUp, thirdPlaces] = await Promise.all([
     rankPicks("championTeamId", teamName),
     rankPicks("runnerUpTeamId", teamName),
     rankPicks("thirdPlaceTeamId", teamName),
   ]);
 
-  // Global most-predicted scoreline (across every match prediction) — fun bonus.
-  const allPreds = await prisma.matchPrediction.groupBy({
-    by: ["homeScore", "awayScore"],
-    _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
-    take: 5,
+  // --- Normalized popular scores (2-1 and 1-2 count as the same) ---
+  const allMatchPreds = await prisma.matchPrediction.findMany({
+    select: { homeScore: true, awayScore: true },
   });
-  const totalPreds = await prisma.matchPrediction.count();
-  const popularScores = allPreds.map((p) => ({
-    score: `${p.homeScore}-${p.awayScore}`,
-    count: p._count.id,
-    pct: totalPreds > 0 ? Math.round((p._count.id / totalPreds) * 100) : 0,
-  }));
+  const totalPreds = allMatchPreds.length;
+  const normFreq = new Map<string, number>();
+  for (const p of allMatchPreds) {
+    const hi = Math.max(p.homeScore, p.awayScore);
+    const lo = Math.min(p.homeScore, p.awayScore);
+    const key = `${hi}-${lo}`;
+    normFreq.set(key, (normFreq.get(key) ?? 0) + 1);
+  }
+  const popularScores = [...normFreq.entries()]
+    .map(([score, count]) => ({
+      score,
+      count,
+      pct: totalPreds > 0 ? Math.round((count / totalPreds) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
-  // Matches available for the per-match analyzer (only ones with both teams set).
+  // --- Matches for per-match analyzer ---
   const matches = await prisma.match.findMany({
     where: { homeTeamId: { not: null }, awayTeamId: { not: null } },
     include: { homeTeam: { select: { name: true } }, awayTeam: { select: { name: true } } },
@@ -106,6 +169,11 @@ export default async function EstatisticasPage() {
         popularScores={popularScores}
         totalPreds={totalPreds}
         matchOptions={matchOptions}
+        teams={teams}
+        unpaidUsers={unpaidUsers}
+        groupPendingUsers={groupPendingUsers}
+        bracketPendingUsers={bracketPendingUsers}
+        groupTotal={groupTotal}
       />
     </div>
   );
