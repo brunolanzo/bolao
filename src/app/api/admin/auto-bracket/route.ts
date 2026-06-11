@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolvePhases } from "@/lib/resolvePhases";
+import { compareStandings } from "@/lib/standings";
 
 const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
 
@@ -36,6 +37,7 @@ const R32_SLOTS: { home: SlotSpec; away: SlotSpec }[] = [
 
 interface Standing {
   teamId: string;
+  code: string;
   group: string;
   played: number;
   wins: number;
@@ -48,10 +50,10 @@ interface Standing {
 }
 
 function compareStanding(a: Standing, b: Standing) {
-  if (b.points !== a.points) return b.points - a.points;
-  if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-  if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-  return a.teamId.localeCompare(b.teamId);
+  return compareStandings(
+    { points: a.points, goalDiff: a.goalDiff, goalsFor: a.goalsFor, code: a.code },
+    { points: b.points, goalDiff: b.goalDiff, goalsFor: b.goalsFor, code: b.code },
+  );
 }
 
 export async function POST() {
@@ -78,7 +80,7 @@ export async function POST() {
     const stats = new Map<string, Standing>();
     for (const t of allTeams) {
       stats.set(t.id, {
-        teamId: t.id, group: t.groupLabel,
+        teamId: t.id, code: t.code, group: t.groupLabel,
         played: 0, wins: 0, draws: 0, losses: 0,
         goalsFor: 0, goalsAgainst: 0, goalDiff: 0, points: 0,
       });

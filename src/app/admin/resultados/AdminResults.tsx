@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { PHASE_LABELS } from "@/lib/scoring";
+import { compareStandings } from "@/lib/standings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,12 +105,12 @@ function computeStandings(
   }
   for (const s of stats.values()) s.goalDiff = s.goalsFor - s.goalsAgainst;
 
-  return Array.from(stats.values()).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-    return a.team.name.localeCompare(b.team.name);
-  });
+  return Array.from(stats.values()).sort((a, b) =>
+    compareStandings(
+      { points: a.points, goalDiff: a.goalDiff, goalsFor: a.goalsFor, code: a.team.code },
+      { points: b.points, goalDiff: b.goalDiff, goalsFor: b.goalsFor, code: b.team.code },
+    ),
+  );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────

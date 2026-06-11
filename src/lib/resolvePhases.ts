@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { compareStandings } from "@/lib/standings";
 import {
   PHASE_POINTS,
   CHAMPION_POINTS,
@@ -120,6 +121,7 @@ export async function cascadeBracket() {
 
 interface Standing {
   teamId: string;
+  code: string;
   group: string;
   played: number;
   points: number;
@@ -129,10 +131,10 @@ interface Standing {
 }
 
 function compareStanding(a: Standing, b: Standing) {
-  if (b.points !== a.points) return b.points - a.points;
-  if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-  if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-  return a.teamId.localeCompare(b.teamId);
+  return compareStandings(
+    { points: a.points, goalDiff: a.goalDiff, goalsFor: a.goalsFor, code: a.code },
+    { points: b.points, goalDiff: b.goalDiff, goalsFor: b.goalsFor, code: b.code },
+  );
 }
 
 /**
@@ -158,7 +160,7 @@ export async function resolvePhases() {
   const stats = new Map<string, Standing>();
   for (const t of teams) {
     stats.set(t.id, {
-      teamId: t.id, group: t.groupLabel,
+      teamId: t.id, code: t.code, group: t.groupLabel,
       played: 0, points: 0,
       goalsFor: 0, goalsAgainst: 0, goalDiff: 0,
     });

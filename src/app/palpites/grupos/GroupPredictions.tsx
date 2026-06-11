@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { calcMatchPoints } from "@/lib/scoring";
+import { compareStandings } from "@/lib/standings";
 
 interface Team {
   id: string;
@@ -94,7 +95,12 @@ function computeStandings(
   // Calculate GD and sort
   const sorted = Object.values(stats)
     .map((s) => ({ ...s, gd: s.gf - s.gc }))
-    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    .sort((a, b) =>
+      compareStandings(
+        { points: a.pts, goalDiff: a.gd, goalsFor: a.gf, code: a.team.code },
+        { points: b.pts, goalDiff: b.gd, goalsFor: b.gf, code: b.team.code },
+      ),
+    );
 
   return sorted;
 }

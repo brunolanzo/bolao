@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { THIRD_PLACE_TABLE } from "@/lib/thirdPlaceTable";
+import { compareStandings } from "@/lib/standings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -244,13 +245,10 @@ export default function ClassificationPredictions({
     const result: Record<string, Standing[]> = {};
 
     function compareStanding(a: Standing, b: Standing) {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-      if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-      // Final tiebreaker: alphabetical by team name (deterministic)
-      const ta = teamById.get(a.teamId);
-      const tb = teamById.get(b.teamId);
-      return (ta?.name ?? "").localeCompare(tb?.name ?? "");
+      return compareStandings(
+        { points: a.points, goalDiff: a.goalDiff, goalsFor: a.goalsFor, code: teamById.get(a.teamId)?.code ?? a.teamId },
+        { points: b.points, goalDiff: b.goalDiff, goalsFor: b.goalsFor, code: teamById.get(b.teamId)?.code ?? b.teamId },
+      );
     }
 
     for (const g of GROUPS) {
@@ -312,14 +310,12 @@ export default function ClassificationPredictions({
       const s = standingsByGroup[g];
       if (s && s[2]) thirds.push(s[2]);
     }
-    thirds.sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-      if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-      const ta = teamById.get(a.teamId);
-      const tb = teamById.get(b.teamId);
-      return (ta?.name ?? "").localeCompare(tb?.name ?? "");
-    });
+    thirds.sort((a, b) =>
+      compareStandings(
+        { points: a.points, goalDiff: a.goalDiff, goalsFor: a.goalsFor, code: teamById.get(a.teamId)?.code ?? a.teamId },
+        { points: b.points, goalDiff: b.goalDiff, goalsFor: b.goalsFor, code: teamById.get(b.teamId)?.code ?? b.teamId },
+      ),
+    );
     return new Set(thirds.slice(0, 8).map((s) => s.teamId));
   }, [standingsByGroup, teamById]);
 
@@ -746,12 +742,12 @@ export default function ClassificationPredictions({
                     if (t) thirds.push({ team: t, standing: s[2], group: g });
                   }
                 }
-                thirds.sort((a, b) => {
-                  if (b.standing.points !== a.standing.points) return b.standing.points - a.standing.points;
-                  if (b.standing.goalDiff !== a.standing.goalDiff) return b.standing.goalDiff - a.standing.goalDiff;
-                  if (b.standing.goalsFor !== a.standing.goalsFor) return b.standing.goalsFor - a.standing.goalsFor;
-                  return a.team.name.localeCompare(b.team.name);
-                });
+                thirds.sort((a, b) =>
+                  compareStandings(
+                    { points: a.standing.points, goalDiff: a.standing.goalDiff, goalsFor: a.standing.goalsFor, code: a.team.code },
+                    { points: b.standing.points, goalDiff: b.standing.goalDiff, goalsFor: b.standing.goalsFor, code: b.team.code },
+                  ),
+                );
                 return thirds.map((t, i) => {
                   const advances = i < 8;
                   return (
