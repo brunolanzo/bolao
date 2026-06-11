@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { hasFirstMatchStarted } from "@/lib/deadlines";
 import type { ReactNode } from "react";
 
 /* ─────────────────────────────────────────────────────────────────
@@ -502,6 +503,14 @@ export default async function Home() {
   const userCount = await prisma.user.count({ where: { role: "user" } });
   const prizePool = userCount * 47;
 
+  // Prize split (70/20/10) and registration cutoff.
+  const championPrize = Math.round(prizePool * 0.7);
+  const runnerUpPrize = Math.round(prizePool * 0.2);
+  const thirdPrize = prizePool - championPrize - runnerUpPrize;
+
+  // Once the first match kicks off, hide the "Criar Conta" CTAs.
+  const firstMatchStarted = await hasFirstMatchStarted();
+
   return (
     <div className="-mt-6 -mx-4">
 
@@ -545,30 +554,59 @@ export default async function Home() {
 
           {/* Prize strip */}
           {userCount > 0 && (
-            <div className="inline-flex items-center gap-2.5 bg-[#FFDF00]/10 border border-[#FFDF00]/25 rounded-full px-5 py-2 mb-10">
-              <span className="text-[#FFDF00] text-base leading-none">💰</span>
-              <span className="text-sm font-semibold text-[#FFDF00]">
-                Prêmio atual:{" "}
-                <span className="font-black">
-                  R$ {prizePool.toLocaleString("pt-BR")}
+            <div className="mb-10">
+              <div className="inline-flex items-center gap-2.5 bg-[#FFDF00]/10 border border-[#FFDF00]/25 rounded-full px-5 py-2">
+                <span className="text-[#FFDF00] text-base leading-none">💰</span>
+                <span className="text-sm font-semibold text-[#FFDF00]">
+                  Prêmio atual:{" "}
+                  <span className="font-black">
+                    R$ {prizePool.toLocaleString("pt-BR")}
+                  </span>
                 </span>
-              </span>
-              <span className="text-white/30 text-xs">·</span>
-              <span className="text-xs text-white/50">{userCount} apostadores</span>
+                <span className="text-white/30 text-xs">·</span>
+                <span className="text-xs text-white/50">{userCount} apostadores</span>
+              </div>
+
+              {/* Prize split 70/20/10 */}
+              <div className="flex items-center justify-center gap-4 sm:gap-6 mt-3 text-[11px] sm:text-xs text-white/55">
+                <span className="inline-flex items-center gap-1.5">
+                  <span>🥇</span>
+                  <span className="text-white/45">Campeão</span>
+                  <span className="font-semibold text-[#FFDF00]/80">
+                    70% · R$ {championPrize.toLocaleString("pt-BR")}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span>🥈</span>
+                  <span className="text-white/45">Vice</span>
+                  <span className="font-semibold text-[#FFDF00]/80">
+                    20% · R$ {runnerUpPrize.toLocaleString("pt-BR")}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span>🥉</span>
+                  <span className="text-white/45">3º</span>
+                  <span className="font-semibold text-[#FFDF00]/80">
+                    10% · R$ {thirdPrize.toLocaleString("pt-BR")}
+                  </span>
+                </span>
+              </div>
             </div>
           )}
 
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-14">
-            <Link
-              href="/registro"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#FFDF00] text-[#003a14] px-8 py-4 rounded-2xl font-bold text-[15px] hover:bg-[#f0d000] transition-all shadow-[0_8px_32px_rgba(255,223,0,0.22)] hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(255,223,0,0.32)]"
-            >
-              Criar Conta
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </Link>
+            {!firstMatchStarted && (
+              <Link
+                href="/registro"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#FFDF00] text-[#003a14] px-8 py-4 rounded-2xl font-bold text-[15px] hover:bg-[#f0d000] transition-all shadow-[0_8px_32px_rgba(255,223,0,0.22)] hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(255,223,0,0.32)]"
+              >
+                Criar Conta
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+            )}
             <Link
               href="/login"
               className="w-full sm:w-auto inline-flex items-center justify-center bg-white/10 border border-white/20 text-white px-8 py-4 rounded-2xl font-medium text-[15px] hover:bg-white/15 transition-all"
@@ -576,6 +614,11 @@ export default async function Home() {
               Já tenho conta
             </Link>
           </div>
+          {firstMatchStarted && (
+            <p className="-mt-10 mb-14 text-sm text-green-200/60">
+              🏁 O Bolão já começou — as inscrições foram encerradas.
+            </p>
+          )}
 
           {/* Stats row */}
           <div className="border-t border-white/[0.1] pt-8 flex items-center justify-center max-w-xs mx-auto">
@@ -835,15 +878,17 @@ export default async function Home() {
               <p className="text-green-200/60 text-sm mt-4 max-w-md mx-auto">
                 Some jogos + classificados + pódio para subir no ranking ao vivo.
               </p>
-              <Link
-                href="/registro"
-                className="inline-flex items-center gap-2 mt-6 bg-[#FFDF00] text-[#003a14] px-7 py-3 rounded-xl font-bold text-sm hover:bg-[#f0d000] transition-all shadow-[0_6px_24px_rgba(255,223,0,0.2)]"
-              >
-                Participar agora
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
+              {!firstMatchStarted && (
+                <Link
+                  href="/registro"
+                  className="inline-flex items-center gap-2 mt-6 bg-[#FFDF00] text-[#003a14] px-7 py-3 rounded-xl font-bold text-sm hover:bg-[#f0d000] transition-all shadow-[0_6px_24px_rgba(255,223,0,0.2)]"
+                >
+                  Participar agora
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -855,7 +900,9 @@ export default async function Home() {
           <p className="text-sm font-bold text-[#006B2B] tracking-tight">Nosso Bolão 2026</p>
           <div className="flex items-center gap-6 text-xs text-gray-400">
             <Link href="/login" className="hover:text-[#006B2B] transition-colors">Entrar</Link>
-            <Link href="/registro" className="hover:text-[#006B2B] transition-colors">Criar Conta</Link>
+            {!firstMatchStarted && (
+              <Link href="/registro" className="hover:text-[#006B2B] transition-colors">Criar Conta</Link>
+            )}
             <Link href="/regulamento" className="hover:text-[#006B2B] transition-colors">Regulamento</Link>
           </div>
           <p className="text-xs text-gray-300">© Bruno Lanzo · 2026</p>

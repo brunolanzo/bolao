@@ -19,16 +19,25 @@ interface Props {
   users: User[];
 }
 
-/** "2026-06-11T00:00:00Z"  →  "2026-06-11T00:00" */
+// Brasília is UTC-3 year-round (Brazil abolished daylight saving time in 2019).
+const BRT_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * Stored instant → "YYYY-MM-DDTHH:mm" as Brasília wall-clock time for the input.
+ * Handles both new values (with -03:00 offset) and legacy ones (stored as UTC "Z").
+ */
 function isoToLocal(iso: string): string {
   if (!iso) return "";
-  return iso.slice(0, 16);
+  const instant = new Date(iso);
+  if (isNaN(instant.getTime())) return "";
+  // Shift to Brasília, then read the shifted UTC fields as wall-clock.
+  return new Date(instant.getTime() - BRT_OFFSET_MS).toISOString().slice(0, 16);
 }
 
-/** "2026-06-11T00:00"  →  "2026-06-11T00:00:00Z" */
+/** "2026-06-11T00:00" (Brasília) → "2026-06-11T00:00:00-03:00" stored instant. */
 function localToIso(local: string): string {
   if (!local) return "";
-  return local + ":00Z";
+  return local + ":00-03:00";
 }
 
 export default function AdminSettings({ settings: initialSettings, users }: Props) {
@@ -107,7 +116,7 @@ export default function AdminSettings({ settings: initialSettings, users }: Prop
         <div className="space-y-3">
           <div>
             <label className="block text-sm text-gray-500 mb-1">
-              Deadline Fase de Grupos <span className="text-xs text-gray-400">(UTC)</span>
+              Deadline Fase de Grupos <span className="text-xs text-gray-400">(horário de Brasília)</span>
             </label>
             <input
               type="datetime-local"

@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { isRegistrationClosed } from "@/lib/deadlines";
 
 export async function POST(request: Request) {
   try {
+    // Registration closes once the betting deadline passes.
+    if (await isRegistrationClosed()) {
+      return NextResponse.json(
+        { error: "As inscrições foram encerradas. O Bolão já começou!" },
+        { status: 403 }
+      );
+    }
+
     const { name, email, password } = await request.json();
 
     if (!name || !email || !password) {

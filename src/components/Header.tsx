@@ -9,6 +9,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [palpitesOpen, setPalpitesOpen] = useState(false);
   const [paymentPaid, setPaymentPaid] = useState<boolean | null>(null);
+  const [regClosed, setRegClosed] = useState(false);
   const palpitesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,6 +18,16 @@ export default function Header() {
         .then((res) => res.json())
         .then((data) => setPaymentPaid(data.paid ?? false))
         .catch(() => setPaymentPaid(false));
+    }
+  }, [session]);
+
+  // For logged-out visitors: hide "Cadastrar" once registration closes.
+  useEffect(() => {
+    if (!session) {
+      fetch("/api/registration-status")
+        .then((res) => res.json())
+        .then((data) => setRegClosed(!!data.closed))
+        .catch(() => setRegClosed(false));
     }
   }, [session]);
 
@@ -155,12 +166,14 @@ export default function Header() {
             <Link href="/login" className="hover:text-[#009C3B] transition-colors">
               Entrar
             </Link>
-            <Link
-              href="/registro"
-              className="bg-[#009C3B] text-white px-4 py-1.5 rounded-md hover:bg-[#006B2B] transition-colors"
-            >
-              Cadastrar
-            </Link>
+            {!regClosed && (
+              <Link
+                href="/registro"
+                className="bg-[#009C3B] text-white px-4 py-1.5 rounded-md hover:bg-[#006B2B] transition-colors"
+              >
+                Cadastrar
+              </Link>
+            )}
           </nav>
         )}
       </div>
