@@ -31,23 +31,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Seleção não encontrada" }, { status: 404 });
   }
 
-  const users = await prisma.user.findMany({
-    where: { role: "user" },
-    select: { id: true },
-  });
-  const userIds = users.map((u) => u.id);
-  const total = userIds.length;
-
-  // Champion predictions (champion / vice / 3rd)
+  // Only consider users who actually completed their bracket prediction.
+  // A finished bracket always produces a ChampionPrediction, so its presence is
+  // our "deu palpite" marker — users who left it blank / haven't filled it yet
+  // are excluded so they don't inflate the "Fase de grupos" bucket.
   const champPreds = await prisma.championPrediction.findMany({
-    where: { userId: { in: userIds } },
+    where: { user: { role: "user" } },
     select: { userId: true, championTeamId: true, runnerUpTeamId: true, thirdPlaceTeamId: true },
   });
   const champMap = new Map(champPreds.map((c) => [c.userId, c]));
+  const eligibleUserIds = champPreds.map((c) => c.userId);
+  const total = eligibleUserIds.length;
 
-  // Phase predictions for this team
+  // Phase predictions for this team (only from eligible users)
   const phasePreds = await prisma.phasePrediction.findMany({
-    where: { teamId, userId: { in: userIds } },
+    where: { teamId, userId: { in: eligibleUserIds } },
     select: { userId: true, phase: true },
   });
   const userPhases = new Map<string, Set<string>>();
@@ -67,7 +65,7 @@ export async function GET(request: Request) {
     groups: 0,
   };
 
-  for (const uid of userIds) {
+  for (const uid of eligibleUserIds) {
     const champ = champMap.get(uid);
     const phases = userPhases.get(uid) ?? new Set<string>();
 
