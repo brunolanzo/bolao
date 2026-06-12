@@ -328,6 +328,7 @@ interface MatchStats {
   isFinished: boolean;
   realScore: string | null;
   exactHits: number;
+  leaderPick: { name: string; homeScore: number; awayScore: number } | null;
 }
 
 function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
@@ -359,6 +360,9 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
     if (s.topScores.length > 0) {
       txt += `\n🎯 Placares mais apostados:\n`;
       txt += s.topScores.map((t) => `• ${t.score} (${t.count}×)`).join("\n");
+    }
+    if (s.leaderPick) {
+      txt += `\n\n👑 Palpite do líder (${formatName(s.leaderPick.name)}): ${m.homeTeam} ${s.leaderPick.homeScore} x ${s.leaderPick.awayScore} ${m.awayTeam}`;
     }
     if (s.isFinished) {
       txt += `\n\n✅ Resultado real: ${s.realScore}\n`;
@@ -428,6 +432,19 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
                   ))}
                 </div>
               </div>
+
+              {stats.leaderPick && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                  <p className="text-sm">
+                    👑 Palpite do líder{" "}
+                    <strong>{formatName(stats.leaderPick.name)}</strong>:{" "}
+                    <strong>
+                      {stats.match.homeTeam} {stats.leaderPick.homeScore} x{" "}
+                      {stats.leaderPick.awayScore} {stats.match.awayTeam}
+                    </strong>
+                  </p>
+                </div>
+              )}
 
               {stats.isFinished && (
                 <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">

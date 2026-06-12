@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeRanking } from "@/lib/ranking";
 
 /**
  * GET /api/admin/stats/match?matchId=<id>
@@ -71,6 +72,24 @@ export async function GET(request: Request) {
     }
   }
 
+  // Current ranking leader's prediction for this match — fun "root for/against" angle.
+  let leaderPick: { name: string; homeScore: number; awayScore: number } | null = null;
+  const ranking = await computeRanking();
+  const leader = ranking[0];
+  if (leader) {
+    const leaderPred = await prisma.matchPrediction.findUnique({
+      where: { userId_matchId: { userId: leader.id, matchId } },
+      select: { homeScore: true, awayScore: true },
+    });
+    if (leaderPred) {
+      leaderPick = {
+        name: leader.name,
+        homeScore: leaderPred.homeScore,
+        awayScore: leaderPred.awayScore,
+      };
+    }
+  }
+
   return NextResponse.json({
     match: {
       id: match.id,
@@ -88,5 +107,6 @@ export async function GET(request: Request) {
     isFinished,
     realScore,
     exactHits,
+    leaderPick,
   });
 }
