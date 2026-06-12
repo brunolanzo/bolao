@@ -146,12 +146,16 @@ export default async function EstatisticasPage() {
     THIRD_PLACE: "3º Lugar",
     FINAL: "Final",
   };
-  const matchOptions: MatchOption[] = matches.map((m) => ({
-    id: m.id,
-    label: `[${phaseLabel[m.phase] ?? m.phase}${m.groupLabel ? " " + m.groupLabel : ""}] ${m.homeTeam?.name} × ${m.awayTeam?.name}${m.status === "FINISHED" ? " ✓" : ""}`,
-    phase: m.phase,
-    status: m.status,
-  }));
+  const matchOptions: MatchOption[] = matches
+    .map((m) => ({
+      id: m.id,
+      label: `[${phaseLabel[m.phase] ?? m.phase}${m.groupLabel ? " " + m.groupLabel : ""}] ${m.homeTeam?.name} × ${m.awayTeam?.name}${m.status === "FINISHED" ? " ✓" : ""}`,
+      phase: m.phase,
+      status: m.status,
+    }))
+    // Already-played (FINISHED) matches sink to the bottom; the rest keep
+    // chronological (matchOrder) order thanks to the stable sort.
+    .sort((a, b) => (a.status === "FINISHED" ? 1 : 0) - (b.status === "FINISHED" ? 1 : 0));
 
   return (
     <div>
