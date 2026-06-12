@@ -22,24 +22,69 @@ interface RankingEntry {
   totalPhasePts: number;
   totalChampPts: number;
   totalPoints: number;
+  /** Positions gained (+) or lost (−) vs. the last finished match. null = no baseline yet. */
+  delta: number | null;
+}
+
+export interface LastScore {
+  homeName: string;
+  awayName: string;
+  homeScore: number;
+  awayScore: number;
+  status: string;
 }
 
 interface Props {
   ranking: RankingEntry[];
   currentUserId: string;
   isGroupLocked: boolean;
+  lastScore: LastScore | null;
 }
 
-function CopyRankingButton({ ranking }: { ranking: RankingEntry[] }) {
+/** WhatsApp header announcing the scoreline of the match the admin last updated. */
+function scoreHeaderText(ls: LastScore): string {
+  if (ls.homeScore === 0 && ls.awayScore === 0) {
+    return `🟢 *BOLA ROLANDO!* ${ls.homeName} 0 x 0 ${ls.awayName}`;
+  }
+  return `⚽ *TEM GOL!* ${ls.homeName} ${ls.homeScore} x ${ls.awayScore} ${ls.awayName}`;
+}
+
+/** Compact ▲/▼ movement badge for the UI tables. */
+function MovementArrow({ delta }: { delta: number | null }) {
+  if (delta == null || delta === 0) {
+    return <span className="text-gray-300 text-xs" title="Sem mudança">–</span>;
+  }
+  if (delta > 0) {
+    return (
+      <span className="text-green-600 text-xs font-semibold" title={`Subiu ${delta} posição(ões)`}>
+        ▲{delta}
+      </span>
+    );
+  }
+  return (
+    <span className="text-red-500 text-xs font-semibold" title={`Caiu ${-delta} posição(ões)`}>
+      ▼{-delta}
+    </span>
+  );
+}
+
+/** ▲/▼ marker for the WhatsApp copy text. */
+function arrowText(delta: number | null): string {
+  if (delta == null || delta === 0) return "";
+  return delta > 0 ? ` 🔺${delta}` : ` 🔻${-delta}`;
+}
+
+function CopyRankingButton({ ranking, lastScore }: { ranking: RankingEntry[]; lastScore: LastScore | null }) {
   const [copied, setCopied] = useState(false);
 
   function buildText() {
     const medals = ["🥇", "🥈", "🥉"];
     const lines = ranking.map((u, i) => {
       const pos = medals[i] ?? `${i + 1}.`;
-      return `${pos} ${formatName(u.name)} — ${u.totalPoints} pts`;
+      return `${pos} ${formatName(u.name)} — ${u.totalPoints} pts${arrowText(u.delta)}`;
     });
-    return `🏆 *Ranking — Nosso Bolão 2026*\n\n${lines.join("\n")}`;
+    const header = lastScore ? `${scoreHeaderText(lastScore)}\n\n` : "";
+    return `${header}🏆 *Ranking — Nosso Bolão 2026*\n\n${lines.join("\n")}`;
   }
 
   async function copy() {
@@ -67,7 +112,7 @@ function CopyRankingButton({ ranking }: { ranking: RankingEntry[] }) {
   );
 }
 
-export default function RankingTable({ ranking, currentUserId, isGroupLocked }: Props) {
+export default function RankingTable({ ranking, currentUserId, isGroupLocked, lastScore }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (ranking.length === 0) {
@@ -82,7 +127,7 @@ export default function RankingTable({ ranking, currentUserId, isGroupLocked }: 
     <>
       {/* Copy to WhatsApp */}
       <div className="mb-4 flex justify-end">
-        <CopyRankingButton ranking={ranking} />
+        <CopyRankingButton ranking={ranking} lastScore={lastScore} />
       </div>
 
       {/* Transparency hint — only after lock */}
@@ -179,9 +224,12 @@ export default function RankingTable({ ranking, currentUserId, isGroupLocked }: 
                   }`}
                 >
                   <td className="px-3 py-2.5">
-                    <span className={i < 3 ? "font-bold" : "text-gray-400"}>
-                      {i + 1}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={i < 3 ? "font-bold" : "text-gray-400"}>
+                        {i + 1}
+                      </span>
+                      <MovementArrow delta={user.delta} />
+                    </div>
                   </td>
                   <td className="px-3 py-2.5">
                     {isGroupLocked ? (
@@ -295,6 +343,7 @@ export default function RankingTable({ ranking, currentUserId, isGroupLocked }: 
                       <span className="text-xs text-gray-400">
                         🎯 {user.exactScores}
                       </span>
+                      <MovementArrow delta={user.delta} />
                     </div>
                   </div>
                 </div>

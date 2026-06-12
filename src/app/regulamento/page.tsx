@@ -59,6 +59,16 @@ export default async function RegulamentoPage() {
       ],
     },
     {
+      title: "Premiação",
+      items: [
+        "O prêmio total é formado pela soma das contribuições de todos os participantes e cresce conforme novos jogadores entram no bolão.",
+        "A premiação é dividida entre os três primeiros colocados do ranking final:",
+        "🏆 1º lugar (campeão do bolão): 70% do prêmio total",
+        "🥈 2º lugar: 20% do prêmio total",
+        "🥉 3º lugar: 10% do prêmio total",
+      ],
+    },
+    {
       title: "Palpites de Placar — Eliminatórias",
       items: [
         "Os palpites de placar dos jogos eliminatórios são abertos progressivamente ao longo do torneio:",

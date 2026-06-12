@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
@@ -29,7 +29,9 @@ export default function LoginPage() {
       setError("Email ou senha incorretos");
       setLoading(false);
     } else {
-      router.push("/palpites/grupos");
+      // Admins land straight on the results page to update scores quickly.
+      const session = await getSession();
+      router.push(session?.user?.role === "admin" ? "/admin/resultados" : "/palpites/grupos");
       router.refresh();
     }
   }
