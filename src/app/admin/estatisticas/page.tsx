@@ -29,6 +29,12 @@ export interface GroupPendingUser {
   done: number;
 }
 
+export interface ExactHitMatch {
+  label: string;       // "[Grupos A] México 2 x 1 África do Sul"
+  score: string;       // "2 x 1"
+  hitters: string[];   // names of people who nailed the exact score
+}
+
 async function rankPicks(
   field: "championTeamId" | "runnerUpTeamId" | "thirdPlaceTeamId",
   teamName: Map<string, string>
@@ -157,6 +163,31 @@ export default async function EstatisticasPage() {
     // chronological (matchOrder) order thanks to the stable sort.
     .sort((a, b) => (a.status === "FINISHED" ? 1 : 0) - (b.status === "FINISHED" ? 1 : 0));
 
+  // --- Exact-score hits across finished matches (placar cravado) ---
+  const finishedMatches = await prisma.match.findMany({
+    where: {
+      status: "FINISHED",
+      homeScore: { not: null },
+      awayScore: { not: null },
+      homeTeamId: { not: null },
+      awayTeamId: { not: null },
+    },
+    include: {
+      homeTeam: { select: { name: true } },
+      awayTeam: { select: { name: true } },
+      predictions: {
+        where: { points: 7 }, // 7 pts = exact score
+        include: { user: { select: { name: true } } },
+      },
+    },
+    orderBy: { matchOrder: "desc" },
+  });
+  const exactHitMatches: ExactHitMatch[] = finishedMatches.map((m) => ({
+    label: `[${phaseLabel[m.phase] ?? m.phase}${m.groupLabel ? " " + m.groupLabel : ""}] ${m.homeTeam?.name} ${m.homeScore} x ${m.awayScore} ${m.awayTeam?.name}`,
+    score: `${m.homeScore} x ${m.awayScore}`,
+    hitters: m.predictions.map((p) => p.user.name),
+  }));
+
   return (
     <div>
       <div className="mb-6">
@@ -178,6 +209,7 @@ export default async function EstatisticasPage() {
         groupPendingUsers={groupPendingUsers}
         bracketPendingUsers={bracketPendingUsers}
         groupTotal={groupTotal}
+        exactHitMatches={exactHitMatches}
       />
     </div>
   );

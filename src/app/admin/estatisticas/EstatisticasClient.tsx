@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser } from "./page";
+import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch } from "./page";
 import type { TeamDistribution } from "@/app/api/admin/stats/team/route";
 import { formatName } from "@/lib/formatName";
 
@@ -469,6 +469,60 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
   );
 }
 
+// --- Exact-score hits (placares cravados) ---
+
+function ExactHitsCard({ matches }: { matches: ExactHitMatch[] }) {
+  const [open, setOpen] = useState(true);
+  const withHits = matches.filter((m) => m.hitters.length > 0);
+
+  const waText =
+    withHits.length === 0
+      ? `🎯 *Placares cravados — Nosso Bolão 2026*\n\nAinda ninguém cravou um placar exato!`
+      : `🎯 *Placares cravados — Nosso Bolão 2026*\n\n` +
+        withHits
+          .map((m) => `⚽ ${m.label}\n🎯 ${m.hitters.map(formatName).join(", ")}`)
+          .join("\n\n");
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-left">
+          <span className="text-gray-400 text-xs">{open ? "▼" : "▶"}</span>
+          <h3 className="font-bold">🎯 Placares cravados</h3>
+          <span className="text-xs text-gray-400">({withHits.length} {withHits.length === 1 ? "jogo" : "jogos"})</span>
+        </button>
+        {matches.length > 0 && <CopyButton text={waText} />}
+      </div>
+
+      {open && (
+        matches.length === 0 ? (
+          <p className="text-sm text-gray-400">Nenhum jogo finalizado ainda.</p>
+        ) : (
+          <div className="space-y-2">
+            {matches.map((m, i) => (
+              <div key={i} className="flex flex-col gap-1 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                <span className="text-sm font-medium">{m.label}</span>
+                {m.hitters.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-gray-400">🎯 cravaram:</span>
+                    {m.hitters.map((h) => (
+                      <span key={h} className="text-xs bg-green-50 border border-green-200 text-green-700 rounded px-1.5 py-0.5 font-medium">
+                        {formatName(h)}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-400">ninguém cravou</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 // --- Main export ---
 
 export default function EstatisticasClient({
@@ -483,6 +537,7 @@ export default function EstatisticasClient({
   groupPendingUsers,
   bracketPendingUsers,
   groupTotal,
+  exactHitMatches,
 }: {
   champions: { ranking: RankedTeam[]; total: number };
   runnersUp: { ranking: RankedTeam[]; total: number };
@@ -495,6 +550,7 @@ export default function EstatisticasClient({
   groupPendingUsers: GroupPendingUser[];
   bracketPendingUsers: string[];
   groupTotal: number;
+  exactHitMatches: ExactHitMatch[];
 }) {
   const popularText =
     `🎯 *Placares mais apostados (geral) — Nosso Bolão 2026*\n\n` +
@@ -541,6 +597,14 @@ export default function EstatisticasClient({
           Análise por partida
         </h2>
         <MatchAnalyzer matchOptions={matchOptions} />
+      </section>
+
+      {/* Placares cravados */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Placares cravados
+        </h2>
+        <ExactHitsCard matches={exactHitMatches} />
       </section>
 
       {/* Bônus */}
