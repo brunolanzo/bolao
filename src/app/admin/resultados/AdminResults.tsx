@@ -438,8 +438,43 @@ export default function AdminResults({ matches }: Props) {
     [phaseMatches],
   );
 
+  // Matches happening right now — surfaced at the top for quick goal entry.
+  // Counts anything marked LIVE, plus games whose kickoff was in the last ~3h
+  // and aren't finished yet (so the admin finds them even before flipping LIVE).
+  const liveNowMatches = useMemo(() => {
+    const now = Date.now();
+    const THREE_HOURS = 3 * 60 * 60 * 1000;
+    return matches
+      .filter((m) => {
+        const st = scores[m.id]?.status ?? m.status;
+        if (st === "FINISHED") return false;
+        if (st === "LIVE") return true;
+        const kickoff = new Date(m.matchDate).getTime();
+        return kickoff <= now && kickoff >= now - THREE_HOURS;
+      })
+      .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+  }, [matches, scores]);
+
   return (
     <div className="space-y-4 pb-32">
+      {/* Happening now — quick access */}
+      {liveNowMatches.length > 0 && (
+        <div className="border-2 border-yellow-300 bg-yellow-50/60 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <h2 className="text-sm font-bold text-amber-800">Acontecendo agora</h2>
+            <span className="text-xs text-amber-600">
+              {liveNowMatches.length} {liveNowMatches.length === 1 ? "jogo" : "jogos"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+            {liveNowMatches.map((m) => (
+              <MatchCard key={`live-${m.id}`} match={m} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Phase filter */}
       <div className="flex flex-wrap gap-2">
         {phasesPresent.map((phase) => {

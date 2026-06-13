@@ -131,9 +131,14 @@ export default function Header() {
                 </Link>
               )}
               {session.user.role === "admin" && (
-                <Link href="/admin" className="hover:text-[#009C3B] transition-colors">
-                  Admin
-                </Link>
+                <>
+                  <Link href="/admin/resultados" className="hover:text-[#009C3B] transition-colors">
+                    Atualizar
+                  </Link>
+                  <Link href="/admin" className="hover:text-[#009C3B] transition-colors">
+                    Admin
+                  </Link>
+                </>
               )}
               <div className="flex items-center gap-3 ml-2 pl-4 border-l border-green-200">
                 <span className="text-gray-500">{session.user.name}</span>
@@ -224,9 +229,14 @@ export default function Header() {
               </Link>
             )}
             {session.user.role === "admin" && (
-              <Link href="/admin" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
-                Admin
-              </Link>
+              <>
+                <Link href="/admin/resultados" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                  Atualizar
+                </Link>
+                <Link href="/admin" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                  Admin
+                </Link>
+              </>
             )}
             <div className="pt-3 border-t border-green-200">
               <span className="text-gray-500 block mb-2">{session.user.name}</span>
