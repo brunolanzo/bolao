@@ -29,6 +29,11 @@ export interface GroupPendingUser {
   done: number;
 }
 
+export interface UserOption {
+  id: string;
+  name: string;
+}
+
 export interface ExactHitMatch {
   label: string;       // "[Grupos A] México 2 x 1 África do Sul"
   score: string;       // "2 x 1"
@@ -93,6 +98,8 @@ export default async function EstatisticasPage() {
       championPrediction: { select: { id: true } },
     },
   });
+
+  const userOptions: UserOption[] = allUsers.map((u) => ({ id: u.id, name: u.name }));
 
   const unpaidUsers: string[] = allUsers
     .filter((u) => !(u.payment?.paid ?? false))
@@ -210,6 +217,7 @@ export default async function EstatisticasPage() {
         bracketPendingUsers={bracketPendingUsers}
         groupTotal={groupTotal}
         exactHitMatches={exactHitMatches}
+        userOptions={userOptions}
       />
     </div>
   );

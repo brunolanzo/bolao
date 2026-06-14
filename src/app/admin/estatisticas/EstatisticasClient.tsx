@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch } from "./page";
+import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch, UserOption } from "./page";
 import type { TeamDistribution } from "@/app/api/admin/stats/team/route";
 import { formatName } from "@/lib/formatName";
 
@@ -534,6 +534,203 @@ function ExactHitsCard({ matches }: { matches: ExactHitMatch[] }) {
   );
 }
 
+// --- Individual user performance ---
+
+interface UserStats {
+  name: string;
+  rankingPosition: number;
+  totalParticipants: number;
+  totalPoints: number;
+  totalMatchPts: number;
+  totalPhasePts: number;
+  totalChampPts: number;
+  exactScores: number;
+  finishedMatches: number;
+  correctOutcomes: number;
+  championPick: string | null;
+  runnerUpPick: string | null;
+  thirdPlacePick: string | null;
+  matchResults: { matchLabel: string; predicted: string; actual: string; points: number }[];
+}
+
+function positionLabel(pos: number): string {
+  return `${pos}°`;
+}
+
+function UserAnalyzer({ users }: { users: UserOption[] }) {
+  const [selected, setSelected] = useState("");
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+
+  async function load(userId: string) {
+    setSelected(userId);
+    setStats(null);
+    setShowAll(false);
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/stats/user?userId=${userId}`);
+      const data = await res.json();
+      if (res.ok) setStats(data);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function waText(s: UserStats): string {
+    let txt = `📊 *Desempenho de ${formatName(s.name)} — Nosso Bolão 2026*\n\n`;
+    txt += `📍 Posição: ${positionLabel(s.rankingPosition)} de ${s.totalParticipants} participantes\n`;
+    txt += `⭐ Pontuação: ${s.totalPoints} pts`;
+    if (s.finishedMatches > 0) {
+      const pctCorrect = pct(s.correctOutcomes, s.finishedMatches);
+      txt += `\n\n⚽ Jogos finalizados: ${s.finishedMatches}\n`;
+      txt += `✅ Resultados acertados: ${s.correctOutcomes} (${pctCorrect}%)\n`;
+      txt += `🎯 Placares cravados: ${s.exactScores}`;
+    }
+    if (s.championPick || s.runnerUpPick || s.thirdPlacePick) {
+      txt += `\n\n🏆 Aposta de campeão: ${s.championPick ?? "—"}\n`;
+      txt += `🥈 Vice: ${s.runnerUpPick ?? "—"}\n`;
+      txt += `🥉 3º lugar: ${s.thirdPlacePick ?? "—"}`;
+    }
+    return txt;
+  }
+
+  const visibleResults = stats
+    ? showAll
+      ? stats.matchResults
+      : stats.matchResults.slice(0, 8)
+    : [];
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <h3 className="font-bold mb-3">👤 Desempenho individual</h3>
+
+      <select
+        value={selected}
+        onChange={(e) => load(e.target.value)}
+        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black mb-4"
+      >
+        <option value="">Selecione um participante…</option>
+        {users.map((u) => (
+          <option key={u.id} value={u.id}>{formatName(u.name)}</option>
+        ))}
+      </select>
+
+      {loading && <p className="text-sm text-gray-400">Carregando…</p>}
+
+      {stats && (
+        <div className="space-y-4">
+          {/* Header row */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold text-[#006B2B]">
+                {positionLabel(stats.rankingPosition)}
+              </span>
+              <div>
+                <p className="font-semibold text-sm leading-tight">{formatName(stats.name)}</p>
+                <p className="text-xs text-gray-400">de {stats.totalParticipants} participantes</p>
+              </div>
+            </div>
+            <CopyButton text={waText(stats)} />
+          </div>
+
+          {/* Points breakdown */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { label: "Total", value: stats.totalPoints, highlight: true },
+              { label: "Placares", value: stats.totalMatchPts },
+              { label: "Fases", value: stats.totalPhasePts },
+              { label: "Campeão", value: stats.totalChampPts },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className={`rounded-lg px-3 py-2 text-center ${item.highlight ? "bg-green-50 border border-green-200" : "bg-gray-50 border border-gray-100"}`}
+              >
+                <p className={`text-lg font-bold ${item.highlight ? "text-[#006B2B]" : "text-gray-700"}`}>
+                  {item.value}
+                </p>
+                <p className="text-xs text-gray-400">{item.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Accuracy */}
+          {stats.finishedMatches > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Finalizados", value: stats.finishedMatches, emoji: "⚽" },
+                { label: "Acertos", value: `${stats.correctOutcomes} (${pct(stats.correctOutcomes, stats.finishedMatches)}%)`, emoji: "✅" },
+                { label: "Cravados", value: stats.exactScores, emoji: "🎯" },
+              ].map((item) => (
+                <div key={item.label} className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-center">
+                  <p className="text-sm font-bold text-gray-700">{item.emoji} {item.value}</p>
+                  <p className="text-xs text-gray-400">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Champion picks */}
+          {(stats.championPick || stats.runnerUpPick || stats.thirdPlacePick) && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 space-y-1">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Apostas finais</p>
+              {[
+                { emoji: "🏆", label: "Campeão", value: stats.championPick },
+                { emoji: "🥈", label: "Vice", value: stats.runnerUpPick },
+                { emoji: "🥉", label: "3º lugar", value: stats.thirdPlacePick },
+              ].map((item) => item.value && (
+                <p key={item.label} className="text-sm">
+                  {item.emoji} <span className="text-gray-500">{item.label}:</span>{" "}
+                  <strong>{item.value}</strong>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Match results */}
+          {stats.matchResults.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Palpites em jogos finalizados
+              </p>
+              <div className="space-y-1">
+                {visibleResults.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span
+                      className={`w-7 shrink-0 text-center font-bold rounded px-1 py-0.5 ${
+                        r.points === 7
+                          ? "bg-yellow-100 text-yellow-700"
+                          : r.points >= 3
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-50 text-red-400"
+                      }`}
+                    >
+                      {r.points >= 3 ? `+${r.points}` : "✗"}
+                    </span>
+                    <span className="flex-1 truncate text-gray-600">{r.matchLabel}</span>
+                    <span className="shrink-0 font-mono text-gray-500">{r.predicted}</span>
+                    <span className="shrink-0 text-gray-300">→</span>
+                    <span className="shrink-0 font-mono text-gray-700 font-medium">{r.actual}</span>
+                  </div>
+                ))}
+              </div>
+              {stats.matchResults.length > 8 && (
+                <button
+                  onClick={() => setShowAll((v) => !v)}
+                  className="mt-2 text-xs text-green-700 hover:underline"
+                >
+                  {showAll ? "Mostrar menos" : `Ver todos (${stats.matchResults.length})`}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Main export ---
 
 export default function EstatisticasClient({
@@ -549,6 +746,7 @@ export default function EstatisticasClient({
   bracketPendingUsers,
   groupTotal,
   exactHitMatches,
+  userOptions,
 }: {
   champions: { ranking: RankedTeam[]; total: number };
   runnersUp: { ranking: RankedTeam[]; total: number };
@@ -562,6 +760,7 @@ export default function EstatisticasClient({
   bracketPendingUsers: string[];
   groupTotal: number;
   exactHitMatches: ExactHitMatch[];
+  userOptions: UserOption[];
 }) {
   const popularText =
     `🎯 *Placares mais apostados (geral) — Nosso Bolão 2026*\n\n` +
@@ -571,6 +770,14 @@ export default function EstatisticasClient({
 
   return (
     <div className="space-y-8">
+      {/* Desempenho individual */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Desempenho individual
+        </h2>
+        <UserAnalyzer users={userOptions} />
+      </section>
+
       {/* Pendências */}
       <section className="space-y-3">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
