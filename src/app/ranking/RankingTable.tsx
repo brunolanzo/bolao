@@ -68,11 +68,9 @@ function MovementArrow({ delta }: { delta: number | null }) {
   );
 }
 
-/** Movement marker for the WhatsApp copy text. There is no green triangle emoji,
- *  so we use 📈 (green, climbing) for gains and 📉 (red, dropping) for losses. */
 function arrowText(delta: number | null): string {
   if (delta == null || delta === 0) return "";
-  return delta > 0 ? ` 📈${delta}` : ` 📉${-delta}`;
+  return delta > 0 ? ` ⬆️${delta}` : ` ⬇️${-delta}`;
 }
 
 function CopyRankingButton({ ranking, lastScore }: { ranking: RankingEntry[]; lastScore: LastScore | null }) {
