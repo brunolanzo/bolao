@@ -286,6 +286,7 @@ export default function AdminResults({ matches }: Props) {
 
     return (
       <div
+        data-match-card=""
         className={`border rounded-lg p-2 bg-white text-xs space-y-1.5 ${
           isFinished
             ? "border-green-200 bg-green-50"
@@ -309,12 +310,21 @@ export default function AdminResults({ matches }: Props) {
             {match.homeTeam?.code ?? "TBD"}
           </span>
           <input
-            type="number"
-            min={0}
-            max={99}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={2}
             value={s.home}
-            onChange={(e) => update(match.id, "home", e.target.value)}
-            className="w-9 h-7 text-center border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-black"
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+              update(match.id, "home", val);
+              if (/^\d$/.test(val)) {
+                const card = (e.target as HTMLElement).closest("[data-match-card]");
+                (card?.querySelector("[data-away-input]") as HTMLInputElement)?.focus();
+              }
+            }}
+            className="w-9 h-7 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black"
+            style={{ fontSize: "16px" }}
           />
         </div>
         {/* Team B row */}
@@ -323,12 +333,18 @@ export default function AdminResults({ matches }: Props) {
             {match.awayTeam?.code ?? "TBD"}
           </span>
           <input
-            type="number"
-            min={0}
-            max={99}
+            data-away-input=""
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={2}
             value={s.away}
-            onChange={(e) => update(match.id, "away", e.target.value)}
-            className="w-9 h-7 text-center border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-black"
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+              update(match.id, "away", val);
+            }}
+            className="w-9 h-7 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black"
+            style={{ fontSize: "16px" }}
           />
         </div>
 
@@ -343,12 +359,21 @@ export default function AdminResults({ matches }: Props) {
                 {match.homeTeam?.code ?? "?"}
               </span>
               <input
-                type="number"
-                min={0}
-                max={20}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={2}
                 value={s.homePen}
-                onChange={(e) => update(match.id, "homePen", e.target.value)}
-                className="w-9 h-6 text-center border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                  update(match.id, "homePen", val);
+                  if (/^\d$/.test(val)) {
+                    const card = (e.target as HTMLElement).closest("[data-match-card]");
+                    (card?.querySelector("[data-away-pen-input]") as HTMLInputElement)?.focus();
+                  }
+                }}
+                className="w-9 h-6 text-center border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500"
+                style={{ fontSize: "16px" }}
               />
             </div>
             <div className="flex items-center gap-1.5 mt-1">
@@ -356,12 +381,18 @@ export default function AdminResults({ matches }: Props) {
                 {match.awayTeam?.code ?? "?"}
               </span>
               <input
-                type="number"
-                min={0}
-                max={20}
+                data-away-pen-input=""
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={2}
                 value={s.awayPen}
-                onChange={(e) => update(match.id, "awayPen", e.target.value)}
-                className="w-9 h-6 text-center border border-amber-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                  update(match.id, "awayPen", val);
+                }}
+                className="w-9 h-6 text-center border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500"
+                style={{ fontSize: "16px" }}
               />
             </div>
             {penaltyWinner && (
@@ -596,8 +627,11 @@ export default function AdminResults({ matches }: Props) {
       )}
 
       {/* Sticky bottom save bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+        <div
+          className="max-w-6xl mx-auto px-4 flex items-center justify-between gap-3"
+          style={{ paddingTop: "12px", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+        >
           <div className="text-sm">
             {dirty.size > 0 ? (
               <span className="text-blue-600 font-medium">
