@@ -135,6 +135,9 @@ export default function Header() {
                   <Link href="/admin/resultados" className="hover:text-[#009C3B] transition-colors">
                     Atualizar
                   </Link>
+                  <Link href="/admin/estatisticas" className="hover:text-[#009C3B] transition-colors">
+                    Estatísticas
+                  </Link>
                   <Link href="/admin" className="hover:text-[#009C3B] transition-colors">
                     Admin
                   </Link>
@@ -232,6 +235,9 @@ export default function Header() {
               <>
                 <Link href="/admin/resultados" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
                   Atualizar
+                </Link>
+                <Link href="/admin/estatisticas" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
+                  Estatísticas
                 </Link>
                 <Link href="/admin" className="block hover:text-[#009C3B]" onClick={() => setMenuOpen(false)}>
                   Admin

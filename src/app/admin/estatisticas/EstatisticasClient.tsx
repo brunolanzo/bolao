@@ -472,52 +472,63 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
 // --- Exact-score hits (placares cravados) ---
 
 function ExactHitsCard({ matches }: { matches: ExactHitMatch[] }) {
-  const [open, setOpen] = useState(true);
-  const withHits = matches.filter((m) => m.hitters.length > 0);
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
-  const waText =
-    withHits.length === 0
-      ? `🎯 *Placares cravados — Nosso Bolão 2026*\n\nAinda ninguém cravou um placar exato!`
-      : `🎯 *Placares cravados — Nosso Bolão 2026*\n\n` +
-        withHits
-          .map((m) => `⚽ ${m.label}\n🎯 ${m.hitters.map(formatName).join(", ")}`)
-          .join("\n\n");
+  const selected = selectedIdx !== null ? matches[selectedIdx] : null;
+
+  function waText(m: ExactHitMatch): string {
+    const hitterLine =
+      m.hitters.length > 0
+        ? `🎯 Cravaram: ${m.hitters.map(formatName).join(", ")}`
+        : `😅 Ninguém cravou`;
+    return `🎯 *Placar cravado — Nosso Bolão 2026*\n\n⚽ ${m.label}\n${hitterLine}`;
+  }
 
   return (
     <div className="border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-left">
-          <span className="text-gray-400 text-xs">{open ? "▼" : "▶"}</span>
-          <h3 className="font-bold">🎯 Placares cravados</h3>
-          <span className="text-xs text-gray-400">({withHits.length} {withHits.length === 1 ? "jogo" : "jogos"})</span>
-        </button>
-        {matches.length > 0 && <CopyButton text={waText} />}
-      </div>
+      <h3 className="font-bold mb-3">🎯 Placares cravados</h3>
 
-      {open && (
-        matches.length === 0 ? (
-          <p className="text-sm text-gray-400">Nenhum jogo finalizado ainda.</p>
-        ) : (
-          <div className="space-y-2">
+      {matches.length === 0 ? (
+        <p className="text-sm text-gray-400">Nenhum jogo finalizado ainda.</p>
+      ) : (
+        <>
+          <select
+            value={selectedIdx ?? ""}
+            onChange={(e) => setSelectedIdx(e.target.value === "" ? null : Number(e.target.value))}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black mb-4"
+          >
+            <option value="">Selecione um jogo finalizado…</option>
             {matches.map((m, i) => (
-              <div key={i} className="flex flex-col gap-1 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
-                <span className="text-sm font-medium">{m.label}</span>
-                {m.hitters.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-gray-400">🎯 cravaram:</span>
-                    {m.hitters.map((h) => (
-                      <span key={h} className="text-xs bg-green-50 border border-green-200 text-green-700 rounded px-1.5 py-0.5 font-medium">
-                        {formatName(h)}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-400">ninguém cravou</span>
-                )}
-              </div>
+              <option key={i} value={i}>{m.label}</option>
             ))}
-          </div>
-        )
+          </select>
+
+          {selected && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-500">
+                  {selected.hitters.length > 0
+                    ? `${selected.hitters.length} ${selected.hitters.length === 1 ? "pessoa cravou" : "pessoas cravaram"}`
+                    : "Ninguém cravou"}
+                </span>
+                <CopyButton text={waText(selected)} />
+              </div>
+
+              {selected.hitters.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-gray-400">🎯 cravaram:</span>
+                  {selected.hitters.map((h) => (
+                    <span key={h} className="text-xs bg-green-50 border border-green-200 text-green-700 rounded px-1.5 py-0.5 font-medium">
+                      {formatName(h)}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">😅 Ninguém cravou o placar exato neste jogo.</p>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
