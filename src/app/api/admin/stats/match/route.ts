@@ -72,21 +72,22 @@ export async function GET(request: Request) {
     }
   }
 
-  // Current ranking leader's prediction for this match — fun "root for/against" angle.
-  let leaderPick: { name: string; homeScore: number; awayScore: number } | null = null;
+  // Top 3 players' predictions for this match
+  const topPicks: { position: number; name: string; homeScore: number; awayScore: number }[] = [];
   const ranking = await computeRanking();
-  const leader = ranking[0];
-  if (leader) {
-    const leaderPred = await prisma.matchPrediction.findUnique({
-      where: { userId_matchId: { userId: leader.id, matchId } },
+  for (let i = 0; i < Math.min(3, ranking.length); i++) {
+    const player = ranking[i];
+    const pred = await prisma.matchPrediction.findUnique({
+      where: { userId_matchId: { userId: player.id, matchId } },
       select: { homeScore: true, awayScore: true },
     });
-    if (leaderPred) {
-      leaderPick = {
-        name: leader.name,
-        homeScore: leaderPred.homeScore,
-        awayScore: leaderPred.awayScore,
-      };
+    if (pred) {
+      topPicks.push({
+        position: i + 1,
+        name: player.name,
+        homeScore: pred.homeScore,
+        awayScore: pred.awayScore,
+      });
     }
   }
 
@@ -107,6 +108,6 @@ export async function GET(request: Request) {
     isFinished,
     realScore,
     exactHits,
-    leaderPick,
+    topPicks,
   });
 }

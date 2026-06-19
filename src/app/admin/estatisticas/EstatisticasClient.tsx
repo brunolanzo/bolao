@@ -328,7 +328,7 @@ interface MatchStats {
   isFinished: boolean;
   realScore: string | null;
   exactHits: number;
-  leaderPick: { name: string; homeScore: number; awayScore: number } | null;
+  topPicks: { position: number; name: string; homeScore: number; awayScore: number }[];
 }
 
 function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
@@ -361,8 +361,11 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
       txt += `\n🎯 Placares mais apostados:\n`;
       txt += s.topScores.map((t) => `• ${t.score} (${t.count}×)`).join("\n");
     }
-    if (s.leaderPick) {
-      txt += `\n\n👑 Palpite do líder (${formatName(s.leaderPick.name)}): ${m.homeTeam} ${s.leaderPick.homeScore} x ${s.leaderPick.awayScore} ${m.awayTeam}`;
+    if (s.topPicks.length > 0) {
+      txt += `\n\n👑 Palpites dos 3 primeiros:\n`;
+      txt += s.topPicks
+        .map((p) => `${p.position}º (${formatName(p.name)}): ${m.homeTeam} ${p.homeScore} x ${p.awayScore} ${m.awayTeam}`)
+        .join("\n");
     }
     if (s.isFinished) {
       txt += `\n\n✅ Resultado real: ${s.realScore}\n`;
@@ -433,16 +436,19 @@ function MatchAnalyzer({ matchOptions }: { matchOptions: MatchOption[] }) {
                 </div>
               </div>
 
-              {stats.leaderPick && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                  <p className="text-sm">
-                    👑 Palpite do líder{" "}
-                    <strong>{formatName(stats.leaderPick.name)}</strong>:{" "}
-                    <strong>
-                      {stats.match.homeTeam} {stats.leaderPick.homeScore} x{" "}
-                      {stats.leaderPick.awayScore} {stats.match.awayTeam}
-                    </strong>
-                  </p>
+              {stats.topPicks.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 space-y-2">
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">👑 Palpites dos 3 primeiros</p>
+                  {stats.topPicks.map((pick) => (
+                    <div key={pick.position} className="text-sm">
+                      <span className="text-gray-500">{pick.position}º </span>
+                      <strong>{formatName(pick.name)}</strong>
+                      {": "}
+                      <strong>
+                        {stats.match.homeTeam} {pick.homeScore} x {pick.awayScore} {stats.match.awayTeam}
+                      </strong>
+                    </div>
+                  ))}
                 </div>
               )}
 
