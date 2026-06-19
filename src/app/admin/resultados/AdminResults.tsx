@@ -148,7 +148,18 @@ export default function AdminResults({ matches }: Props) {
   // Opt-in per match. While enabled, polls ESPN and auto-saves the live score.
   // Safety guards live in syncFromEspn(): never SCHEDULED, never decrease a
   // score, never write a blank/invalid score — so the ongoing pool is safe.
-  const [autoSyncIds, setAutoSyncIds] = useState<Set<string>>(new Set());
+  const [autoSyncIds, setAutoSyncIds] = useState<Set<string>>(() => {
+    const now = Date.now();
+    const THREE_HOURS = 3 * 60 * 60 * 1000;
+    const liveIds = new Set<string>();
+    for (const m of matches) {
+      if (m.status === "FINISHED") continue;
+      if (m.status === "LIVE") { liveIds.add(m.id); continue; }
+      const kickoff = new Date(m.matchDate).getTime();
+      if (kickoff <= now && kickoff >= now - THREE_HOURS) liveIds.add(m.id);
+    }
+    return liveIds;
+  });
   const [syncInfo, setSyncInfo] = useState<Record<string, SyncInfo>>({});
   // Refs so the polling interval always reads fresh state without re-subscribing.
   const scoresRef = useRef(scores);
