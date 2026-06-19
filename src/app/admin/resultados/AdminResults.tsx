@@ -1,8 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { PHASE_LABELS } from "@/lib/scoring";
 import { compareStandings } from "@/lib/standings";
+
+const ESPN_POLL_MS = 45_000;
+
+interface SyncInfo {
+  at: Date;
+  ok: boolean;
+  msg: string;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +144,108 @@ export default function AdminResults({ matches }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [autoForming, setAutoForming] = useState(false);
 
+  // ─── ESPN auto-sync ──────────────────────────────────────────────────────
+  // Opt-in per match. While enabled, polls ESPN and auto-saves the live score.
+  // Safety guards live in syncFromEspn(): never SCHEDULED, never decrease a
+  // score, never write a blank/invalid score — so the ongoing pool is safe.
+  const [autoSyncIds, setAutoSyncIds] = useState<Set<string>>(new Set());
+  const [syncInfo, setSyncInfo] = useState<Record<string, SyncInfo>>({});
+  // Refs so the polling interval always reads fresh state without re-subscribing.
+  const scoresRef = useRef(scores);
+  scoresRef.current = scores;
+  const autoSyncRef = useRef(autoSyncIds);
+  autoSyncRef.current = autoSyncIds;
+
+  function toggleAutoSync(matchId: string) {
+    setAutoSyncIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(matchId)) next.delete(matchId);
+      else next.add(matchId);
+      return next;
+    });
+  }
+
+  async function syncFromEspn(matchId: string) {
+    try {
+      const res = await fetch(`/api/admin/espn-sync?matchId=${matchId}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncInfo((p) => ({ ...p, [matchId]: { at: new Date(), ok: false, msg: data.error ?? "erro" } }));
+        return;
+      }
+      if (!data.found) {
+        setSyncInfo((p) => ({ ...p, [matchId]: { at: new Date(), ok: false, msg: data.reason ?? "não encontrado" } }));
+        return;
+      }
+
+      const newHome: number = data.homeScore;
+      const newAway: number = data.awayScore;
+      const newStatus: string = data.status; // "LIVE" | "FINISHED" — never SCHEDULED
+      const cur = scoresRef.current[matchId] ?? { home: "", away: "", status: "SCHEDULED", homePen: "", awayPen: "" };
+      const curHome = cur.home === "" ? null : parseInt(cur.home, 10);
+      const curAway = cur.away === "" ? null : parseInt(cur.away, 10);
+
+      // Safety: never let ESPN DECREASE an already-saved score (guards against
+      // glitches and protects against accidental zeroing).
+      if ((curHome !== null && newHome < curHome) || (curAway !== null && newAway < curAway)) {
+        setSyncInfo((p) => ({ ...p, [matchId]: { at: new Date(), ok: false, msg: `ignorado: ESPN ${newHome}x${newAway} < atual` } }));
+        return;
+      }
+
+      const changed =
+        cur.home !== String(newHome) || cur.away !== String(newAway) || cur.status !== newStatus;
+      if (!changed) {
+        setSyncInfo((p) => ({ ...p, [matchId]: { at: new Date(), ok: true, msg: `sem mudança (${newHome}x${newAway})` } }));
+        return;
+      }
+
+      // Reflect in the UI, then persist this single match via the normal flow.
+      setScores((prev) => ({
+        ...prev,
+        [matchId]: { ...cur, home: String(newHome), away: String(newAway), status: newStatus },
+      }));
+
+      const saveRes = await fetch("/api/admin/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          updates: [{
+            matchId,
+            homeScore: newHome,
+            awayScore: newAway,
+            status: newStatus,
+            homePenalties: null,
+            awayPenalties: null,
+          }],
+        }),
+      });
+      if (saveRes.ok) {
+        setDirty((prev) => {
+          if (!prev.has(matchId)) return prev;
+          const next = new Set(prev);
+          next.delete(matchId);
+          return next;
+        });
+        setSyncInfo((p) => ({ ...p, [matchId]: { at: new Date(), ok: true, msg: `salvo ${newHome}x${newAway}${newStatus === "FINISHED" ? " (FIM)" : ""}` } }));
+      } else {
+        setSyncInfo((p) => ({ ...p, [matchId]: { at: new Date(), ok: false, msg: "erro ao salvar" } }));
+      }
+    } catch {
+      setSyncInfo((p) => ({ ...p, [matchId]: { at: new Date(), ok: false, msg: "erro de conexão" } }));
+    }
+  }
+
+  // Single interval drives all enabled matches; also fires once immediately on enable.
+  useEffect(() => {
+    if (autoSyncIds.size === 0) return;
+    for (const id of autoSyncIds) syncFromEspn(id);
+    const timer = setInterval(() => {
+      for (const id of autoSyncRef.current) syncFromEspn(id);
+    }, ESPN_POLL_MS);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSyncIds]);
+
   function update(matchId: string, field: keyof ScoreState, value: string) {
     setScores((prev) => {
       const cur = prev[matchId] ?? { home: "", away: "", status: "SCHEDULED", homePen: "", awayPen: "" };
@@ -263,9 +373,11 @@ export default function AdminResults({ matches }: Props) {
 
   // ─── Match card (compact, shared) ─────────────────────────────────────────
 
-  function MatchCard({ match }: { match: Match }) {
+  function MatchCard({ match, showAutoSync }: { match: Match; showAutoSync?: boolean }) {
     const s = scores[match.id] ?? { home: "", away: "", status: "SCHEDULED", homePen: "", awayPen: "" };
     const isDirty = dirty.has(match.id);
+    const autoOn = autoSyncIds.has(match.id);
+    const info = syncInfo[match.id];
     const isFinished = s.status === "FINISHED";
     const dateStr = new Date(match.matchDate).toLocaleDateString("pt-BR", {
       day: "2-digit", month: "2-digit",
@@ -412,6 +524,33 @@ export default function AdminResults({ matches }: Props) {
           <option value="LIVE">Ao Vivo</option>
           <option value="FINISHED">Finalizado</option>
         </select>
+
+        {showAutoSync && (
+          <div className="border-t border-gray-100 pt-1.5 -mb-0.5">
+            <button
+              onClick={() => toggleAutoSync(match.id)}
+              className={`w-full text-[10px] font-semibold rounded px-1.5 py-1 flex items-center justify-center gap-1 transition-colors ${
+                autoOn
+                  ? "bg-green-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {autoOn ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  Auto ESPN ligado
+                </>
+              ) : (
+                "🔄 Auto ESPN"
+              )}
+            </button>
+            {autoOn && info && (
+              <p className={`text-[9px] mt-0.5 text-center ${info.ok ? "text-green-600" : "text-amber-600"}`}>
+                {info.at.toLocaleTimeString("pt-BR")} · {info.msg}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -500,9 +639,12 @@ export default function AdminResults({ matches }: Props) {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
             {liveNowMatches.map((m) => (
-              <MatchCard key={`live-${m.id}`} match={m} />
+              <MatchCard key={`live-${m.id}`} match={m} showAutoSync />
             ))}
           </div>
+          <p className="text-[10px] text-amber-700/80 mt-2">
+            🔄 Auto ESPN puxa o placar a cada {ESPN_POLL_MS / 1000}s e salva sozinho. Nunca zera nem diminui placar; só grava Ao Vivo/Finalizado.
+          </p>
         </div>
       )}
 
