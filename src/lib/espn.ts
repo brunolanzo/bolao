@@ -32,6 +32,11 @@ export const POOL_TO_ESPN: Record<string, string> = {
   ING: "ENG", CRO: "CRO", GAN: "GHA", PAN: "PAN",
   // Confirmed playoff resolutions (group A/B, 18/06)
   UD: "CZE", UA: "BIH",
+  // Confirmed playoff resolutions (remaining 4, deduced from ESPN group matches)
+  UC: "TUR",  // Vencedor UEFA C → Turquia (joga com AUS no Grupo D)
+  UB: "SWE",  // Vencedor UEFA B → Suécia (joga com TUN/HOL/JAP no Grupo F)
+  IC1: "COD", // Vencedor IC 1 → Congo DR (joga com POR/UZB/COL no Grupo K)
+  IC2: "IRQ", // Vencedor IC 2 → Iraque (joga com FRA/SEN/NOR no Grupo I)
   // Identity fallbacks (only match same team; no risk of a wrong match)
   CZE: "CZE", BIH: "BIH", SWE: "SWE", TUR: "TUR", IRQ: "IRQ", COD: "COD",
 };
