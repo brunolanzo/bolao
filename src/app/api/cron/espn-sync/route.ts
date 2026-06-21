@@ -31,16 +31,21 @@ export async function GET(request: Request) {
   }
 
   const now = new Date();
-  const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  // Every match is seeded at a placeholder 18:00 UTC, so the exact stored time
+  // can't tell us what's live. We pull a generous window around "now" and let
+  // ESPN decide: lookupEspnScore returns found:false for games still "pre", so
+  // nothing is written until a game is actually in progress or finished.
+  // Window: 16h before … 8h after, to absorb the placeholder-time drift.
+  const windowStart = new Date(now.getTime() - 16 * 60 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + 8 * 60 * 60 * 1000);
 
-  // Find matches that are live or kicked off in the last 3h and aren't finished
   const liveMatches = await prisma.match.findMany({
     where: {
       OR: [
         { status: "LIVE" },
         {
           status: { not: "FINISHED" },
-          matchDate: { lte: now, gte: threeHoursAgo },
+          matchDate: { gte: windowStart, lte: windowEnd },
         },
       ],
     },

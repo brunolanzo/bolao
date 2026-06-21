@@ -6,6 +6,19 @@ import { compareStandings } from "@/lib/standings";
 
 const ESPN_POLL_MS = 45_000;
 
+// Every match is seeded at a placeholder 18:00 UTC, so we can't rely on the
+// exact kickoff to know what's live. Instead we treat any non-finished match
+// whose stored time is "around now" as a candidate and let ESPN decide if it's
+// actually live (it returns "pre"/"in"/"post"; we only write on "in"/"post").
+// The window is generous on both sides to absorb the placeholder-time drift:
+// real kickoffs range from a few hours before to ~9h after the stored 18:00 UTC.
+const AROUND_PAST_MS = 16 * 60 * 60 * 1000; // 16h before
+const AROUND_FUTURE_MS = 8 * 60 * 60 * 1000; //  8h after
+function isAroundNow(matchDate: string | Date, now: number = Date.now()): boolean {
+  const kickoff = new Date(matchDate).getTime();
+  return kickoff >= now - AROUND_PAST_MS && kickoff <= now + AROUND_FUTURE_MS;
+}
+
 interface SyncInfo {
   at: Date;
   ok: boolean;
@@ -149,14 +162,11 @@ export default function AdminResults({ matches }: Props) {
   // Safety guards live in syncFromEspn(): never SCHEDULED, never decrease a
   // score, never write a blank/invalid score — so the ongoing pool is safe.
   const [autoSyncIds, setAutoSyncIds] = useState<Set<string>>(() => {
-    const now = Date.now();
-    const THREE_HOURS = 3 * 60 * 60 * 1000;
     const liveIds = new Set<string>();
     for (const m of matches) {
       if (m.status === "FINISHED") continue;
       if (m.status === "LIVE") { liveIds.add(m.id); continue; }
-      const kickoff = new Date(m.matchDate).getTime();
-      if (kickoff <= now && kickoff >= now - THREE_HOURS) liveIds.add(m.id);
+      if (isAroundNow(m.matchDate)) liveIds.add(m.id);
     }
     return liveIds;
   });
@@ -620,18 +630,16 @@ export default function AdminResults({ matches }: Props) {
   );
 
   // Matches happening right now — surfaced at the top for quick goal entry.
-  // Counts anything marked LIVE, plus games whose kickoff was in the last ~3h
-  // and aren't finished yet (so the admin finds them even before flipping LIVE).
+  // Counts anything marked LIVE, plus non-finished games whose stored time is
+  // "around now" (see isAroundNow) so the admin finds them even before the
+  // status flips to LIVE — the placeholder 18:00 UTC time can't be trusted.
   const liveNowMatches = useMemo(() => {
-    const now = Date.now();
-    const THREE_HOURS = 3 * 60 * 60 * 1000;
     return matches
       .filter((m) => {
         const st = scores[m.id]?.status ?? m.status;
         if (st === "FINISHED") return false;
         if (st === "LIVE") return true;
-        const kickoff = new Date(m.matchDate).getTime();
-        return kickoff <= now && kickoff >= now - THREE_HOURS;
+        return isAroundNow(m.matchDate);
       })
       .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
   }, [matches, scores]);
