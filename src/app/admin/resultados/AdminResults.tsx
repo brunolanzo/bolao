@@ -416,18 +416,22 @@ export default function AdminResults({ matches }: Props) {
       !isNaN(hPen) && !isNaN(aPen)
         ? hPen > aPen ? "home" : aPen > hPen ? "away" : null
         : null;
+    // Finished knockout tie with no shootout winner → bracket is blocked.
+    const needsPenalties = showPenalties && isFinished && !penaltyWinner;
 
     return (
       <div
         data-match-card=""
         className={`border rounded-lg p-2 bg-white text-xs space-y-1.5 ${
-          isFinished
-            ? "border-green-200 bg-green-50"
-            : s.status === "LIVE"
-              ? "border-yellow-200 bg-yellow-50"
-              : isDirty
-                ? "border-blue-300"
-                : "border-gray-200"
+          needsPenalties
+            ? "border-2 border-red-400 bg-red-50"
+            : isFinished
+              ? "border-green-200 bg-green-50"
+              : s.status === "LIVE"
+                ? "border-yellow-200 bg-yellow-50"
+                : isDirty
+                  ? "border-blue-300"
+                  : "border-gray-200"
         }`}
       >
         <div className="flex items-center justify-between gap-1">
@@ -487,6 +491,11 @@ export default function AdminResults({ matches }: Props) {
             <div className="text-[9px] text-amber-700 font-semibold uppercase tracking-wide mb-1">
               Pênaltis (não conta na pontuação)
             </div>
+            {needsPenalties && (
+              <div className="text-[10px] text-red-700 font-medium mb-1.5 leading-snug">
+                ⚠️ Empate no mata-mata — informe os pênaltis para definir quem avança.
+              </div>
+            )}
             <div className="flex items-center gap-1.5">
               <span className="flex-1 truncate text-[10px] text-gray-600" title={match.homeTeam?.name}>
                 {match.homeTeam?.code ?? "?"}
@@ -644,8 +653,58 @@ export default function AdminResults({ matches }: Props) {
       .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
   }, [matches, scores]);
 
+  // Knockout matches finished in a tie with no penalty winner entered — the
+  // bracket can't advance until the admin fills the shootout. Surfaced at the
+  // very top because it silently blocks the cascade otherwise.
+  const stuckOnPenalties = useMemo(() => {
+    return matches
+      .filter((m) => {
+        if (m.phase === "GROUP") return false;
+        const s = scores[m.id];
+        if (!s || s.status !== "FINISHED") return false;
+        const h = parseInt(s.home, 10);
+        const a = parseInt(s.away, 10);
+        if (isNaN(h) || isNaN(a) || h !== a) return false; // only tied games
+        const hp = parseInt(s.homePen, 10);
+        const ap = parseInt(s.awayPen, 10);
+        const hasWinner = !isNaN(hp) && !isNaN(ap) && hp !== ap;
+        return !hasWinner;
+      })
+      .sort((a, b) => a.matchOrder - b.matchOrder);
+  }, [matches, scores]);
+
   return (
     <div className="space-y-4 pb-32">
+      {/* Bracket blocked — knockout tie without a shootout result */}
+      {stuckOnPenalties.length > 0 && (
+        <div className="border-2 border-red-300 bg-red-50 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span>⚠️</span>
+            <h2 className="text-sm font-bold text-red-800">
+              Mata-mata empatado sem pênaltis
+            </h2>
+            <span className="text-xs text-red-600">
+              {stuckOnPenalties.length} {stuckOnPenalties.length === 1 ? "jogo" : "jogos"}
+            </span>
+          </div>
+          <p className="text-[11px] text-red-700/90 mb-2">
+            Estes jogos terminaram empatados e ainda não têm o placar dos pênaltis.
+            A chave <strong>não avança</strong> até você definir quem passou. Os pontos
+            já estão corretos (contam o empate); os pênaltis só decidem o avanço.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {stuckOnPenalties.map((m) => (
+              <span
+                key={`stuck-${m.id}`}
+                className="text-[11px] font-medium bg-white border border-red-200 text-red-700 rounded px-2 py-0.5"
+              >
+                #{m.matchOrder} {m.homeTeam?.code ?? "?"} {scores[m.id]?.home}×{scores[m.id]?.away} {m.awayTeam?.code ?? "?"}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Happening now — quick access */}
       {liveNowMatches.length > 0 && (
         <div className="border-2 border-yellow-300 bg-yellow-50/60 rounded-lg p-3">
