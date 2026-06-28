@@ -679,8 +679,54 @@ export default function AdminResults({ matches }: Props) {
       .sort((a, b) => a.matchOrder - b.matchOrder);
   }, [matches, scores]);
 
+  // Current phase of the tournament: the first phase (in canonical order) that
+  // still has at least one match not yet FINISHED. Advances on its own as games
+  // finish. null = everything finished (tournament over).
+  const currentPhase = useMemo(() => {
+    for (const phase of PHASE_ORDER) {
+      const pm = matches.filter((m) => m.phase === phase);
+      if (pm.length === 0) continue;
+      const finished = pm.filter(
+        (m) => (scores[m.id]?.status ?? m.status) === "FINISHED",
+      ).length;
+      if (finished < pm.length) return { phase, finished, total: pm.length };
+    }
+    return null;
+  }, [matches, scores]);
+
   return (
     <div className="space-y-4 pb-32">
+      {/* Current phase indicator */}
+      <div className="border-2 border-[#009C3B]/30 bg-green-50 rounded-lg p-3 flex items-center justify-between gap-3">
+        {currentPhase ? (
+          <>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">
+                Fase atual
+              </p>
+              <p className="text-lg font-bold text-[#006B2B] leading-tight truncate">
+                {PHASE_LABELS[currentPhase.phase] ?? currentPhase.phase}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-sm font-semibold text-gray-700">
+                {currentPhase.finished}/{currentPhase.total}
+              </p>
+              <p className="text-[10px] text-gray-400">jogos finalizados</p>
+            </div>
+          </>
+        ) : (
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">
+              Fase atual
+            </p>
+            <p className="text-lg font-bold text-[#006B2B] leading-tight">
+              🏆 Torneio encerrado
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Bracket blocked — knockout tie without a shootout result */}
       {stuckOnPenalties.length > 0 && (
         <div className="border-2 border-red-300 bg-red-50 rounded-lg p-3">
