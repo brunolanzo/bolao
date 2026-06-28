@@ -76,6 +76,13 @@ export async function GET(request: Request) {
       homeTeam: { select: { id: true, code: true, name: true } },
       awayTeam: { select: { id: true, code: true, name: true } },
       _count: { select: { predictions: true } },
+      predictions: {
+        select: {
+          homeScore: true,
+          awayScore: true,
+          user: { select: { name: true } },
+        },
+      },
     },
   });
 
@@ -126,6 +133,9 @@ export async function GET(request: Request) {
       newAway: source.awayTeam ? `${source.awayTeam.name} (${source.awayTeam.code})` : "—",
       newAwayTeamId: source.awayTeamId!,
       predictionsOnThisMatch: m._count.predictions,
+      predictedBy: m.predictions.map(
+        (p) => `${p.user.name} (${p.homeScore}x${p.awayScore})`,
+      ),
       changes: m.awayTeamId !== source.awayTeamId,
     };
   });
