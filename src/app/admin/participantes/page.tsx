@@ -16,7 +16,25 @@ export interface Participante {
   bracketDone: boolean;
   paid: boolean;
   bankDone: boolean;
+  /** Whether the participant has already filled a prediction for the next match. */
+  nextMatchDone: boolean;
 }
+
+export interface NextMatchInfo {
+  id: string;
+  label: string; // "Oitavas · França × Suécia"
+  when: string;  // "04/07 às 18:00"
+}
+
+const PHASE_SHORT: Record<string, string> = {
+  GROUP: "Grupos",
+  ROUND_32: "2ª Fase",
+  ROUND_16: "Oitavas",
+  QUARTERS: "Quartas",
+  SEMIS: "Semis",
+  THIRD_PLACE: "3º lugar",
+  FINAL: "Final",
+};
 
 export default async function ParticipantesPage() {
   const session = await getServerSession(authOptions);
@@ -41,6 +59,51 @@ export default async function ParticipantesPage() {
       : [];
   const predCountMap = new Map(predCounts.map((p) => [p.userId, p._count.id]));
 
+  // Next match to be played: earliest SCHEDULED match with both teams assigned.
+  // As games finish/start (status leaves SCHEDULED) this pointer advances on its
+  // own — the page is force-dynamic, so it's recomputed on every load.
+  const nextMatch = await prisma.match.findFirst({
+    where: {
+      status: "SCHEDULED",
+      homeTeamId: { not: null },
+      awayTeamId: { not: null },
+    },
+    orderBy: { matchDate: "asc" },
+    include: {
+      homeTeam: { select: { name: true } },
+      awayTeam: { select: { name: true } },
+    },
+  });
+
+  // Who already filled a prediction for that next match.
+  const nextMatchPredUserIds = nextMatch
+    ? new Set(
+        (
+          await prisma.matchPrediction.findMany({
+            where: { matchId: nextMatch.id },
+            select: { userId: true },
+          })
+        ).map((p) => p.userId),
+      )
+    : new Set<string>();
+
+  let nextMatchInfo: NextMatchInfo | null = null;
+  if (nextMatch) {
+    const phase = PHASE_SHORT[nextMatch.phase] ?? nextMatch.phase;
+    const when = new Date(nextMatch.matchDate).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/Sao_Paulo",
+    });
+    nextMatchInfo = {
+      id: nextMatch.id,
+      label: `${phase} · ${nextMatch.homeTeam?.name ?? "?"} × ${nextMatch.awayTeam?.name ?? "?"}`,
+      when: when.replace(", ", " às "),
+    };
+  }
+
   const users = await prisma.user.findMany({
     where: { role: "user" },
     orderBy: { name: "asc" },
@@ -62,6 +125,7 @@ export default async function ParticipantesPage() {
     bracketDone: u.championPrediction !== null,
     paid: u.payment?.paid ?? false,
     bankDone: u.bankDetails !== null,
+    nextMatchDone: nextMatchPredUserIds.has(u.id),
   }));
 
   return (
@@ -72,7 +136,11 @@ export default async function ParticipantesPage() {
           Acompanhe as pendências de cada participante para ajudá-los a concluir o cadastro.
         </p>
       </div>
-      <ParticipantesList participantes={participantes} currentUserId={session.user.id} />
+      <ParticipantesList
+        participantes={participantes}
+        currentUserId={session.user.id}
+        nextMatch={nextMatchInfo}
+      />
     </div>
   );
 }

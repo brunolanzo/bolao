@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Participante } from "./page";
+import type { Participante, NextMatchInfo } from "./page";
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -19,9 +19,11 @@ function StatusPill({ ok, label }: { ok: boolean; label: string }) {
 export default function ParticipantesList({
   participantes,
   currentUserId,
+  nextMatch,
 }: {
   participantes: Participante[];
   currentUserId: string;
+  nextMatch: NextMatchInfo | null;
 }) {
   const [list, setList] = useState(participantes);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -59,9 +61,38 @@ export default function ParticipantesList({
   const fullyDone = list.filter(
     (p) => p.groupPredictions >= p.groupTotal && p.groupTotal > 0 && p.bracketDone && p.paid
   ).length;
+  const nextMatchPending = nextMatch
+    ? list.filter((p) => !p.nextMatchDone).length
+    : 0;
 
   return (
     <div className="space-y-4">
+      {/* Próximo jogo */}
+      {nextMatch && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+              ⏭️ Próximo jogo
+            </p>
+            <p className="text-sm font-medium truncate">
+              {nextMatch.label}{" "}
+              <span className="text-gray-400 font-normal">· {nextMatch.when}</span>
+            </p>
+          </div>
+          <span
+            className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${
+              nextMatchPending > 0
+                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                : "bg-green-100 text-green-700 border border-green-200"
+            }`}
+          >
+            {nextMatchPending > 0
+              ? `${nextMatchPending} ${nextMatchPending === 1 ? "pendente" : "pendentes"}`
+              : "Todos preencheram ✓"}
+          </span>
+        </div>
+      )}
+
       {/* Resumo */}
       <div className="flex flex-wrap gap-4 text-sm">
         <span className="text-gray-500">
@@ -98,6 +129,9 @@ export default function ParticipantesList({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {nextMatch && (
+                  <StatusPill ok={p.nextMatchDone} label="Próximo jogo" />
+                )}
                 <StatusPill
                   ok={groupsOk}
                   label={`Grupos ${p.groupPredictions}/${p.groupTotal}`}
