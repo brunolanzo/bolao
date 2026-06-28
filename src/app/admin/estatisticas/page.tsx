@@ -40,6 +40,17 @@ export interface ExactHitMatch {
   hitters: string[];   // names of people who nailed the exact score
 }
 
+export interface ParticipantRank {
+  name: string;
+  value: number;       // exact-hit count or points, depending on the ranking
+}
+
+export interface PhasePointRanking {
+  phase: string;
+  label: string;
+  ranking: ParticipantRank[];
+}
+
 async function rankPicks(
   field: "championTeamId" | "runnerUpTeamId" | "thirdPlaceTeamId",
   teamName: Map<string, string>
@@ -195,6 +206,71 @@ export default async function EstatisticasPage() {
     hitters: m.predictions.map((p) => p.user.name),
   }));
 
+  // --- Participant rankings: group-phase exact hits + per-phase points ---
+  // One pass over every participant's scored predictions. Match-prediction
+  // points are read from the persisted `points` field (same source the live
+  // ranking uses), and the knockout phase rankings add the phase-advancement
+  // bonus (PhasePrediction) so each card reflects the FULL points earned in
+  // that phase — not just placar points.
+  const usersWithPreds = await prisma.user.findMany({
+    where: { role: "user" },
+    select: {
+      name: true,
+      matchPredictions: {
+        where: { points: { not: null } },
+        select: { points: true, match: { select: { phase: true } } },
+      },
+      phasePredictions: {
+        where: { points: { not: null } },
+        select: { points: true, phase: true },
+      },
+    },
+  });
+
+  const byValueThenName = (a: ParticipantRank, b: ParticipantRank) =>
+    b.value - a.value || a.name.localeCompare(b.name, "pt-BR");
+
+  // 1) Placares cravados na fase de grupos (count of exact scores, 7 pts).
+  const groupExactRanking: ParticipantRank[] = usersWithPreds
+    .map((u) => ({
+      name: u.name,
+      value: u.matchPredictions.filter(
+        (p) => p.points === 7 && p.match.phase === "GROUP",
+      ).length,
+    }))
+    .filter((r) => r.value > 0)
+    .sort(byValueThenName);
+
+  // 2) Pontuação por fase eliminatória. PhasePrediction.phase only covers
+  //    ROUND_32..FINAL; THIRD_PLACE earns points solely from the match placar.
+  const knockoutPhases: { key: string; label: string }[] = [
+    { key: "ROUND_32", label: "16 avos (2ª Fase)" },
+    { key: "ROUND_16", label: "Oitavas de Final" },
+    { key: "QUARTERS", label: "Quartas de Final" },
+    { key: "SEMIS", label: "Semifinais" },
+    { key: "FINAL", label: "Final" },
+    { key: "THIRD_PLACE", label: "Disputa 3º Lugar" },
+  ];
+
+  const phasePointRankings: PhasePointRanking[] = knockoutPhases.map(
+    ({ key, label }) => ({
+      phase: key,
+      label,
+      ranking: usersWithPreds
+        .map((u) => {
+          const matchPts = u.matchPredictions
+            .filter((p) => p.match.phase === key)
+            .reduce((sum, p) => sum + (p.points ?? 0), 0);
+          const bonusPts = u.phasePredictions
+            .filter((p) => p.phase === key)
+            .reduce((sum, p) => sum + (p.points ?? 0), 0);
+          return { name: u.name, value: matchPts + bonusPts };
+        })
+        .filter((r) => r.value > 0)
+        .sort(byValueThenName),
+    }),
+  );
+
   return (
     <div>
       <div className="mb-6">
@@ -218,6 +294,8 @@ export default async function EstatisticasPage() {
         groupTotal={groupTotal}
         exactHitMatches={exactHitMatches}
         userOptions={userOptions}
+        groupExactRanking={groupExactRanking}
+        phasePointRankings={phasePointRankings}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch, UserOption } from "./page";
+import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch, UserOption, ParticipantRank, PhasePointRanking } from "./page";
 import type { TeamDistribution } from "@/app/api/admin/stats/team/route";
 import { formatName } from "@/lib/formatName";
 
@@ -206,6 +206,113 @@ function RankingCard({
           </div>
         )
       )}
+    </div>
+  );
+}
+
+// --- Participant rankings (group exact hits + per-phase points) ---
+
+function ParticipantRankingCard({
+  title,
+  emoji,
+  subtitle,
+  ranking,
+  formatValue,
+  waTitle,
+  emptyText,
+  defaultOpen = true,
+}: {
+  title: string;
+  emoji: string;
+  subtitle?: string;
+  ranking: ParticipantRank[];
+  formatValue: (v: number) => string;
+  waTitle: string;
+  emptyText: string;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const max = ranking.length > 0 ? ranking[0].value : 0;
+  const waText =
+    ranking.length > 0
+      ? `${waTitle}\n\n` +
+        ranking
+          .slice(0, 10)
+          .map((r, i) => `${medal(i)} ${formatName(r.name)} — ${formatValue(r.value)}`)
+          .join("\n")
+      : `${waTitle}\n\n${emptyText}`;
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-left">
+          <span className="text-gray-400 text-xs">{open ? "▼" : "▶"}</span>
+          <div>
+            <h3 className="font-bold">{emoji} {title}</h3>
+            {subtitle && <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>}
+          </div>
+        </button>
+        {ranking.length > 0 && <CopyButton text={waText} />}
+      </div>
+
+      {open && (
+        ranking.length === 0 ? (
+          <p className="text-sm text-gray-400">{emptyText}</p>
+        ) : (
+          <div className="space-y-1.5">
+            {ranking.slice(0, 10).map((r, i) => (
+              <div key={r.name} className="flex items-center gap-3 text-sm">
+                <span className="w-7 shrink-0 text-center">{medal(i)}</span>
+                <span className="w-32 shrink-0 font-medium truncate">{formatName(r.name)}</span>
+                <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="bg-green-500 h-full rounded-full"
+                    style={{ width: `${max > 0 ? Math.round((r.value / max) * 100) : 0}%` }}
+                  />
+                </div>
+                <span className="w-20 shrink-0 text-right text-gray-600 text-xs">
+                  {formatValue(r.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+function ParticipantRankingsSection({
+  groupExactRanking,
+  phasePointRankings,
+}: {
+  groupExactRanking: ParticipantRank[];
+  phasePointRankings: PhasePointRanking[];
+}) {
+  return (
+    <div className="space-y-3">
+      <ParticipantRankingCard
+        title="Placares cravados — Fase de Grupos"
+        emoji="🎯"
+        subtitle="Quem mais acertou o placar exato (7 pts) nos jogos da 1ª fase"
+        ranking={groupExactRanking}
+        formatValue={(v) => `${v} ${v === 1 ? "cravado" : "cravados"}`}
+        waTitle="🎯 *Placares cravados — Fase de Grupos (Nosso Bolão 2026)*"
+        emptyText="Ninguém cravou um placar na fase de grupos ainda."
+      />
+      {phasePointRankings.map((pr) => (
+        <ParticipantRankingCard
+          key={pr.phase}
+          title={`Pontuação — ${pr.label}`}
+          emoji="📊"
+          subtitle="Pontos de placar + bônus de classificação nesta fase"
+          ranking={pr.ranking}
+          formatValue={(v) => `${v} pts`}
+          waTitle={`📊 *Pontuação — ${pr.label} (Nosso Bolão 2026)*`}
+          emptyText="Ainda sem pontuação nesta fase."
+          defaultOpen={false}
+        />
+      ))}
     </div>
   );
 }
@@ -753,6 +860,8 @@ export default function EstatisticasClient({
   groupTotal,
   exactHitMatches,
   userOptions,
+  groupExactRanking,
+  phasePointRankings,
 }: {
   champions: { ranking: RankedTeam[]; total: number };
   runnersUp: { ranking: RankedTeam[]; total: number };
@@ -767,6 +876,8 @@ export default function EstatisticasClient({
   groupTotal: number;
   exactHitMatches: ExactHitMatch[];
   userOptions: UserOption[];
+  groupExactRanking: ParticipantRank[];
+  phasePointRankings: PhasePointRanking[];
 }) {
   const popularText =
     `🎯 *Placares mais apostados (geral) — Nosso Bolão 2026*\n\n` +
@@ -782,6 +893,17 @@ export default function EstatisticasClient({
           Desempenho individual
         </h2>
         <UserAnalyzer users={userOptions} />
+      </section>
+
+      {/* Rankings de participantes */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Rankings de participantes
+        </h2>
+        <ParticipantRankingsSection
+          groupExactRanking={groupExactRanking}
+          phasePointRankings={phasePointRankings}
+        />
       </section>
 
       {/* Pendências */}
