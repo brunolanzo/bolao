@@ -66,11 +66,14 @@ function ymd(d: Date): string {
   );
 }
 
-/** Candidate query dates: the match's nominal date plus "now", so a live game
- *  is found even if the stored kickoff date drifts by a few hours. */
+/** Candidate query dates: the day before and day of the stored kickoff, plus
+ *  "now". ESPN lists post-UTC-midnight games under the PREVIOUS day's matchday
+ *  slug, so checking day-1 of matchDate is what finds them after sync-times
+ *  has updated the kickoff to the real 02:xx UTC time. */
 export function candidateDates(matchDate: Date): string[] {
   const now = new Date();
-  const set = new Set<string>([ymd(matchDate), ymd(now)]);
+  const dayBefore = new Date(matchDate.getTime() - 24 * 60 * 60 * 1000);
+  const set = new Set<string>([ymd(dayBefore), ymd(matchDate), ymd(now)]);
   return [...set];
 }
 
