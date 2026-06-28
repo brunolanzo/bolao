@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch, UserOption, ParticipantRank, PhasePointRanking } from "./page";
 import type { TeamDistribution } from "@/app/api/admin/stats/team/route";
+import type { HeadToHead } from "@/app/api/admin/stats/head-to-head/route";
 import { formatName } from "@/lib/formatName";
 
 function CopyButton({ text }: { text: string }) {
@@ -844,6 +845,215 @@ function UserAnalyzer({ users }: { users: UserOption[] }) {
   );
 }
 
+// --- Head-to-head (confronto direto entre dois participantes) ---
+
+function H2HRow({
+  label,
+  aVal,
+  bVal,
+  aWins,
+  bWins,
+}: {
+  label: string;
+  aVal: string | number;
+  bVal: string | number;
+  aWins: boolean;
+  bWins: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-sm py-1.5 border-b border-gray-100 last:border-0">
+      <span
+        className={`w-16 sm:w-20 shrink-0 text-right font-bold tabular-nums ${
+          aWins ? "text-[#006B2B]" : "text-gray-400"
+        }`}
+      >
+        {aVal}
+      </span>
+      <span className="flex-1 text-center text-xs text-gray-500">{label}</span>
+      <span
+        className={`w-16 sm:w-20 shrink-0 text-left font-bold tabular-nums ${
+          bWins ? "text-[#006B2B]" : "text-gray-400"
+        }`}
+      >
+        {bVal}
+      </span>
+    </div>
+  );
+}
+
+function HeadToHeadAnalyzer({ users }: { users: UserOption[] }) {
+  const [aId, setAId] = useState("");
+  const [bId, setBId] = useState("");
+  const [data, setData] = useState<HeadToHead | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load(nextA: string, nextB: string) {
+    setData(null);
+    setError(null);
+    if (!nextA || !nextB || nextA === nextB) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/stats/head-to-head?a=${nextA}&b=${nextB}`);
+      const json = await res.json();
+      if (res.ok) setData(json);
+      else setError(json.error || "Erro ao carregar confronto");
+    } catch {
+      setError("Erro ao carregar confronto");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function onChangeA(v: string) {
+    setAId(v);
+    load(v, bId);
+  }
+  function onChangeB(v: string) {
+    setBId(v);
+    load(aId, v);
+  }
+
+  function waText(d: HeadToHead): string {
+    const { a, b } = d;
+    let txt = `⚔️ *Confronto direto — Nosso Bolão 2026*\n\n`;
+    txt += `${formatName(a.name)} (${a.position}º)  🆚  ${formatName(b.name)} (${b.position}º)\n\n`;
+    if (d.comparedMatches > 0) {
+      txt += `🥊 Em ${d.comparedMatches} jogos que ambos palpitaram:\n`;
+      txt += `• ${formatName(a.name)} pontuou mais: ${d.aWins}\n`;
+      txt += `• Empates: ${d.draws}\n`;
+      txt += `• ${formatName(b.name)} pontuou mais: ${d.bWins}\n\n`;
+    }
+    txt += `⭐ Pontos totais: ${a.totalPoints} x ${b.totalPoints}\n`;
+    txt += `⚽ Placares: ${a.totalMatchPts} x ${b.totalMatchPts}\n`;
+    txt += `📈 Fases: ${a.totalPhasePts} x ${b.totalPhasePts}\n`;
+    txt += `🏆 Campeão: ${a.totalChampPts} x ${b.totalChampPts}\n`;
+    txt += `🎯 Placares cravados: ${a.exactScores} x ${b.exactScores}\n`;
+    txt += `✅ Acertos de resultado: ${a.correctOutcomes} x ${b.correctOutcomes}`;
+    return txt;
+  }
+
+  const a = data?.a;
+  const b = data?.b;
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <h3 className="font-bold mb-3">⚔️ Confronto direto</h3>
+
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <select
+          value={aId}
+          onChange={(e) => onChangeA(e.target.value)}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B]"
+        >
+          <option value="">Participante A…</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id} disabled={u.id === bId}>
+              {formatName(u.name)}
+            </option>
+          ))}
+        </select>
+        <select
+          value={bId}
+          onChange={(e) => onChangeB(e.target.value)}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="">Participante B…</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id} disabled={u.id === aId}>
+              {formatName(u.name)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loading && <p className="text-sm text-gray-400">Carregando…</p>}
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
+      {data && a && b && (
+        <div className="space-y-4">
+          {/* Names header */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 text-right">
+              <p className="font-semibold text-sm leading-tight truncate">{formatName(a.name)}</p>
+              <p className="text-xs text-gray-400">{a.position}º de {data.totalParticipants}</p>
+            </div>
+            <span className="text-gray-300 font-bold text-sm shrink-0">VS</span>
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-sm leading-tight truncate">{formatName(b.name)}</p>
+              <p className="text-xs text-gray-400">{b.position}º de {data.totalParticipants}</p>
+            </div>
+          </div>
+
+          {/* Head-to-head duel tally */}
+          {data.comparedMatches > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2 text-center">
+                🥊 {data.comparedMatches} jogos que ambos palpitaram
+              </p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className={`w-10 shrink-0 text-right font-bold ${data.aWins > data.bWins ? "text-[#006B2B]" : "text-gray-500"}`}>
+                  {data.aWins}
+                </span>
+                <div className="flex-1 flex h-3 rounded-full overflow-hidden bg-gray-100">
+                  <div className="bg-[#009C3B]" style={{ width: `${pct(data.aWins, data.comparedMatches)}%` }} />
+                  <div className="bg-gray-300" style={{ width: `${pct(data.draws, data.comparedMatches)}%` }} />
+                  <div className="bg-blue-500" style={{ width: `${pct(data.bWins, data.comparedMatches)}%` }} />
+                </div>
+                <span className={`w-10 shrink-0 text-left font-bold ${data.bWins > data.aWins ? "text-[#006B2B]" : "text-gray-500"}`}>
+                  {data.bWins}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 text-center mt-1">
+                pontuou mais · {data.draws} {data.draws === 1 ? "empate" : "empates"}
+              </p>
+            </div>
+          )}
+
+          {/* Stat-by-stat comparison */}
+          <div>
+            <H2HRow label="⭐ Pontos totais" aVal={a.totalPoints} bVal={b.totalPoints} aWins={a.totalPoints > b.totalPoints} bWins={b.totalPoints > a.totalPoints} />
+            <H2HRow label="📍 Posição" aVal={`${a.position}º`} bVal={`${b.position}º`} aWins={a.position < b.position} bWins={b.position < a.position} />
+            <H2HRow label="⚽ Placares" aVal={a.totalMatchPts} bVal={b.totalMatchPts} aWins={a.totalMatchPts > b.totalMatchPts} bWins={b.totalMatchPts > a.totalMatchPts} />
+            <H2HRow label="📈 Fases" aVal={a.totalPhasePts} bVal={b.totalPhasePts} aWins={a.totalPhasePts > b.totalPhasePts} bWins={b.totalPhasePts > a.totalPhasePts} />
+            <H2HRow label="🏆 Campeão" aVal={a.totalChampPts} bVal={b.totalChampPts} aWins={a.totalChampPts > b.totalChampPts} bWins={b.totalChampPts > a.totalChampPts} />
+            <H2HRow label="🎯 Cravados" aVal={a.exactScores} bVal={b.exactScores} aWins={a.exactScores > b.exactScores} bWins={b.exactScores > a.exactScores} />
+            <H2HRow
+              label="✅ Acertos"
+              aVal={`${a.correctOutcomes} (${pct(a.correctOutcomes, a.finishedMatches)}%)`}
+              bVal={`${b.correctOutcomes} (${pct(b.correctOutcomes, b.finishedMatches)}%)`}
+              aWins={a.correctOutcomes > b.correctOutcomes}
+              bWins={b.correctOutcomes > a.correctOutcomes}
+            />
+          </div>
+
+          {/* Champion picks side by side */}
+          {(a.championPick || b.championPick || a.runnerUpPick || b.runnerUpPick) && (
+            <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 space-y-1.5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 text-center">Apostas finais</p>
+              {[
+                { emoji: "🏆", aPick: a.championPick, bPick: b.championPick },
+                { emoji: "🥈", aPick: a.runnerUpPick, bPick: b.runnerUpPick },
+                { emoji: "🥉", aPick: a.thirdPlacePick, bPick: b.thirdPlacePick },
+              ].map((row, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="flex-1 text-right truncate font-medium">{row.aPick ?? "—"}</span>
+                  <span className="shrink-0">{row.emoji}</span>
+                  <span className="flex-1 text-left truncate font-medium">{row.bPick ?? "—"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <CopyButton text={waText(data)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Main export ---
 
 export default function EstatisticasClient({
@@ -893,6 +1103,14 @@ export default function EstatisticasClient({
           Desempenho individual
         </h2>
         <UserAnalyzer users={userOptions} />
+      </section>
+
+      {/* Confronto direto */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Confronto direto
+        </h2>
+        <HeadToHeadAnalyzer users={userOptions} />
       </section>
 
       {/* Rankings de participantes */}
