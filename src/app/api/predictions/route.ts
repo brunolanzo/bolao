@@ -41,52 +41,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
     }
 
-    // Fetch all matches for the predictions to know their phases
+    // Fetch all matches for the predictions to know their phase / kickoff / status
     const matchIds = predictions.map((p) => p.matchId);
     const matches = await prisma.match.findMany({
       where: { id: { in: matchIds } },
-      select: { id: true, phase: true, matchDate: true },
+      select: { id: true, phase: true, matchDate: true, status: true },
     });
 
     const matchById = new Map(matches.map((m) => [m.id, m]));
 
-    // Compute deadline for each phase based on the first match of that phase
-    const phases = [...new Set(matches.map((m) => m.phase))];
-    const phaseDeadlines: Record<string, Date> = {};
-
-    // GROUP uses GROUP_DEADLINE setting
-    if (phases.includes("GROUP")) {
+    // GROUP keeps a single shared deadline (the GROUP_DEADLINE setting).
+    // Knockout matches lock individually at their own kickoff — see below.
+    let groupDeadline: Date | null = null;
+    if (matches.some((m) => m.phase === "GROUP")) {
       const groupSetting = await prisma.settings.findUnique({
         where: { key: "GROUP_DEADLINE" },
       });
-      if (groupSetting) {
-        phaseDeadlines["GROUP"] = new Date(groupSetting.value);
-      }
-    }
-
-    // Knockout phases use the matchDate of the first match of that phase
-    const knockoutPhases = phases.filter((p) => p !== "GROUP");
-    if (knockoutPhases.length > 0) {
-      const phaseFirstMatches = await prisma.match.findMany({
-        where: { phase: { in: knockoutPhases } },
-        orderBy: { matchDate: "asc" },
-      });
-      for (const phase of knockoutPhases) {
-        const firstMatch = phaseFirstMatches.find((m) => m.phase === phase);
-        if (firstMatch) {
-          phaseDeadlines[phase] = new Date(firstMatch.matchDate);
-        }
-      }
+      if (groupSetting) groupDeadline = new Date(groupSetting.value);
     }
 
     const now = new Date();
 
-    // Validate each prediction against its phase deadline
+    // Validate each prediction against the right deadline.
     for (const pred of predictions) {
       const match = matchById.get(pred.matchId);
       if (!match) continue;
-      const deadline = phaseDeadlines[match.phase];
-      if (deadline && now > deadline) {
+
+      let locked = false;
+      if (match.phase === "GROUP") {
+        // Whole group phase closes at GROUP_DEADLINE.
+        locked = groupDeadline ? now > groupDeadline : false;
+      } else {
+        // Each knockout match closes at its own kickoff (or once it's already
+        // live/finished — covers a real kickoff earlier than the stored time).
+        locked =
+          match.status === "LIVE" ||
+          match.status === "FINISHED" ||
+          now > new Date(match.matchDate);
+      }
+
+      if (locked) {
         const phaseLabel: Record<string, string> = {
           GROUP: "fase de grupos",
           ROUND_32: "Segunda Fase",
@@ -96,12 +90,11 @@ export async function POST(request: Request) {
           THIRD_PLACE: "disputa de 3º lugar",
           FINAL: "Final",
         };
-        return NextResponse.json(
-          {
-            error: `O prazo para palpites de ${phaseLabel[match.phase] || match.phase} já encerrou`,
-          },
-          { status: 400 }
-        );
+        const msg =
+          match.phase === "GROUP"
+            ? "O prazo para palpites da fase de grupos já encerrou"
+            : `O prazo para palpitar este jogo (${phaseLabel[match.phase] || match.phase}) já encerrou — a partida já começou`;
+        return NextResponse.json({ error: msg }, { status: 400 });
       }
     }
 

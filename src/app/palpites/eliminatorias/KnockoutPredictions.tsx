@@ -24,13 +24,11 @@ interface Match {
 interface Props {
   matches: Match[];
   initialPredictions: Record<string, { homeScore: number; awayScore: number }>;
-  phaseDeadlines: Record<string, string>;
 }
 
 export default function KnockoutPredictions({
   matches,
   initialPredictions,
-  phaseDeadlines,
 }: Props) {
   const [predictions, setPredictions] = useState(initialPredictions);
   const [saving, setSaving] = useState(false);
@@ -39,19 +37,17 @@ export default function KnockoutPredictions({
 
   const now = new Date();
 
-  function isPhaseLocked(phase: string): boolean {
-    const deadline = phaseDeadlines[phase];
-    if (!deadline) return false;
-    return now > new Date(deadline);
+  // Each knockout match locks at its own kickoff — or as soon as it's live /
+  // finished (covers a real kickoff earlier than the stored placeholder time).
+  function isMatchLocked(match: Match): boolean {
+    if (match.status === "LIVE" || match.status === "FINISHED") return true;
+    return now > new Date(match.matchDate);
   }
 
-  function formatDeadline(phase: string): string | null {
-    const deadline = phaseDeadlines[phase];
-    if (!deadline) return null;
-    return new Date(deadline).toLocaleDateString("pt-BR", {
+  function formatKickoff(matchDate: string): string {
+    return new Date(matchDate).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "long",
-      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -82,9 +78,9 @@ export default function KnockoutPredictions({
     setSaved(false);
     setError(null);
 
-    // Only submit predictions for non-locked phases
+    // Only submit predictions for matches that haven't kicked off yet
     const preds = matches
-      .filter((m) => predictions[m.id] && !isPhaseLocked(m.phase))
+      .filter((m) => predictions[m.id] && !isMatchLocked(m))
       .map((m) => ({
         matchId: m.id,
         homeScore: predictions[m.id].homeScore,
@@ -132,38 +128,27 @@ export default function KnockoutPredictions({
   );
 
   // Determine if there's anything editable
-  const hasEditablePhase = phasesPresent.some((p) => !isPhaseLocked(p));
+  const hasEditableMatch = matches.some((m) => !isMatchLocked(m));
 
   return (
     <div className="space-y-6">
       {phasesPresent.map((phase) => {
         const phaseMatches = matches.filter((m) => m.phase === phase);
-        const locked = isPhaseLocked(phase);
-        const deadlineStr = formatDeadline(phase);
+        const allLocked = phaseMatches.every((m) => isMatchLocked(m));
 
         return (
           <div
             key={phase}
             className={`border rounded-lg p-4 ${
-              locked ? "border-gray-200 bg-gray-50" : "border-green-200"
+              allLocked ? "border-gray-200 bg-gray-50" : "border-green-200"
             }`}
           >
             <div className="flex items-start justify-between mb-3 gap-2">
               <div>
-                <h2 className="font-bold flex items-center gap-2">
-                  {PHASE_LABELS[phase] || phase}
-                  {locked && (
-                    <span className="text-[10px] uppercase tracking-wider bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
-                      🔒 Encerrado
-                    </span>
-                  )}
-                </h2>
-                {deadlineStr && (
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    {locked ? "Encerrou em " : "Aberto até "}
-                    <span className="font-medium">{deadlineStr}</span>
-                  </p>
-                )}
+                <h2 className="font-bold">{PHASE_LABELS[phase] || phase}</h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Cada jogo encerra no seu próprio início.
+                </p>
               </div>
             </div>
 
@@ -175,58 +160,64 @@ export default function KnockoutPredictions({
                   { day: "2-digit", month: "2-digit" },
                 );
                 const isFinished = match.status === "FINISHED";
-                const disabled = isFinished || locked;
+                const locked = isMatchLocked(match);
 
                 return (
-                  <div
-                    key={match.id}
-                    className="flex items-center gap-2 text-sm"
-                  >
-                    <span className="text-gray-400 text-xs w-10">
-                      {dateStr}
-                    </span>
-                    <span className="flex-1 text-right truncate">
-                      {match.homeTeam?.name || "TBD"}
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={20}
-                      value={pred?.homeScore ?? ""}
-                      onChange={(e) =>
-                        updatePrediction(
-                          match.id,
-                          "homeScore",
-                          e.target.value,
-                        )
-                      }
-                      disabled={disabled}
-                      className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100 disabled:opacity-60"
-                    />
-                    <span className="text-gray-400">x</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={20}
-                      value={pred?.awayScore ?? ""}
-                      onChange={(e) =>
-                        updatePrediction(
-                          match.id,
-                          "awayScore",
-                          e.target.value,
-                        )
-                      }
-                      disabled={disabled}
-                      className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100 disabled:opacity-60"
-                    />
-                    <span className="flex-1 truncate">
-                      {match.awayTeam?.name || "TBD"}
-                    </span>
-                    {isFinished && (
-                      <span className="text-xs text-gray-400">
-                        ({match.homeScore} x {match.awayScore})
+                  <div key={match.id}>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-400 text-xs w-10">
+                        {dateStr}
                       </span>
-                    )}
+                      <span className="flex-1 text-right truncate">
+                        {match.homeTeam?.name || "TBD"}
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={20}
+                        value={pred?.homeScore ?? ""}
+                        onChange={(e) =>
+                          updatePrediction(
+                            match.id,
+                            "homeScore",
+                            e.target.value,
+                          )
+                        }
+                        disabled={locked}
+                        className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100 disabled:opacity-60"
+                      />
+                      <span className="text-gray-400">x</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={20}
+                        value={pred?.awayScore ?? ""}
+                        onChange={(e) =>
+                          updatePrediction(
+                            match.id,
+                            "awayScore",
+                            e.target.value,
+                          )
+                        }
+                        disabled={locked}
+                        className="w-10 h-8 text-center border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#009C3B] disabled:bg-gray-100 disabled:opacity-60"
+                      />
+                      <span className="flex-1 truncate">
+                        {match.awayTeam?.name || "TBD"}
+                      </span>
+                      {isFinished && (
+                        <span className="text-xs text-gray-400">
+                          ({match.homeScore} x {match.awayScore})
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5 pl-12">
+                      {isFinished
+                        ? "Encerrado"
+                        : locked
+                          ? "🔒 Jogo já começou — palpites encerrados"
+                          : `Aberto até ${formatKickoff(match.matchDate)}`}
+                    </p>
                   </div>
                 );
               })}
@@ -241,7 +232,7 @@ export default function KnockoutPredictions({
         </div>
       )}
 
-      {hasEditablePhase && (
+      {hasEditableMatch && (
         <div className="flex justify-end">
           <button
             onClick={handleSave}
