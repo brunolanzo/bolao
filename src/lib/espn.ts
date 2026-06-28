@@ -77,13 +77,37 @@ export function candidateDates(matchDate: Date): string[] {
   return [...set];
 }
 
-/** Fetch and parse ESPN's scoreboard for a single YYYYMMDD date. */
+// In-process scoreboard cache. The ESPN sync runs per-match, and each match
+// re-fetches the same YYYYMMDD scoreboard 2–3 times (day-1 / day / now), so a
+// single cron run could fire dozens of identical external requests — each one
+// holding a server process open and, during live games with real traffic,
+// tipping the host over its concurrent-process limit (→ 503). Hostinger runs a
+// persistent Node process, so a short module-level TTL cache collapses all
+// those duplicates into one fetch per date per window. 30s keeps live scores
+// fresh (the admin polls every 45s) while killing the redundant load.
+const SCOREBOARD_TTL_MS = 30 * 1000;
+const scoreboardCache = new Map<string, { ts: number; data: EspnMatch[] }>();
+
+/** Fetch and parse ESPN's scoreboard for a single YYYYMMDD date (cached 30s). */
 export async function fetchEspnByDate(date: string): Promise<EspnMatch[]> {
-  const res = await fetch(`${ESPN_SCOREBOARD}?dates=${date}`, {
-    headers: { "User-Agent": "Mozilla/5.0" },
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
+  const cached = scoreboardCache.get(date);
+  if (cached && Date.now() - cached.ts < SCOREBOARD_TTL_MS) {
+    return cached.data;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${ESPN_SCOREBOARD}?dates=${date}`, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      cache: "no-store",
+    });
+  } catch {
+    // Network hiccup: serve stale data if we have any, else empty (callers
+    // treat empty as "not found" and write nothing).
+    return cached?.data ?? [];
+  }
+  // On a non-OK response, prefer stale data over wiping it.
+  if (!res.ok) return cached?.data ?? [];
   const data = await res.json();
   const events: unknown[] = data?.events ?? [];
   const out: EspnMatch[] = [];
@@ -116,6 +140,8 @@ export async function fetchEspnByDate(date: string): Promise<EspnMatch[]> {
       kickoff,
     });
   }
+
+  scoreboardCache.set(date, { ts: Date.now(), data: out });
   return out;
 }
 
