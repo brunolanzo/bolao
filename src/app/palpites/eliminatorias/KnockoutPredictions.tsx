@@ -45,11 +45,12 @@ export default function KnockoutPredictions({
   }
 
   function formatKickoff(matchDate: string): string {
-    return new Date(matchDate).toLocaleDateString("pt-BR", {
+    return new Date(matchDate).toLocaleString("pt-BR", {
       day: "2-digit",
       month: "long",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "America/Sao_Paulo",
     });
   }
 
@@ -157,7 +158,7 @@ export default function KnockoutPredictions({
                 const pred = predictions[match.id];
                 const dateStr = new Date(match.matchDate).toLocaleDateString(
                   "pt-BR",
-                  { day: "2-digit", month: "2-digit" },
+                  { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" },
                 );
                 const isFinished = match.status === "FINISHED";
                 const locked = isMatchLocked(match);

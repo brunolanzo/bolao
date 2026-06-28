@@ -400,9 +400,15 @@ export default function AdminResults({ matches }: Props) {
     const autoOn = autoSyncIds.has(match.id);
     const info = syncInfo[match.id];
     const isFinished = s.status === "FINISHED";
-    const dateStr = new Date(match.matchDate).toLocaleDateString("pt-BR", {
-      day: "2-digit", month: "2-digit",
-    });
+    const dateStr = new Date(match.matchDate)
+      .toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      })
+      .replace(", ", " ");
 
     // Penalty inputs are only relevant for knockout matches that ended tied
     const isKnockout = match.phase !== "GROUP";
