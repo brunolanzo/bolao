@@ -48,6 +48,7 @@ export interface EspnMatch {
   awayScore: number;
   state: "pre" | "in" | "post";
   detail: string; // e.g. "HT", "FT", "63'"
+  kickoff: string; // ISO kickoff datetime, e.g. "2026-06-21T19:00Z" ("" if absent)
 }
 
 interface EspnCompetitor {
@@ -100,6 +101,7 @@ export async function fetchEspnByDate(date: string): Promise<EspnMatch[]> {
     const type = (status.type as Record<string, unknown>) ?? {};
     const state = (type.state as "pre" | "in" | "post") ?? "pre";
     const detail = String(type.shortDetail ?? status.displayClock ?? "");
+    const kickoff = String(comp.date ?? ev.date ?? "");
 
     out.push({
       homeAbbr: home.team.abbreviation,
@@ -108,6 +110,7 @@ export async function fetchEspnByDate(date: string): Promise<EspnMatch[]> {
       awayScore: parseInt(away.score ?? "", 10),
       state,
       detail,
+      kickoff,
     });
   }
   return out;
