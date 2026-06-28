@@ -40,6 +40,11 @@ export interface ExactHitMatch {
   hitters: string[];   // names of people who nailed the exact score
 }
 
+export interface NextMatchPending {
+  label: string | null;   // "Oitavas · França × Suécia · 04/07 às 18:00" (null if no next match)
+  users: string[];        // names of participants who haven't filled it yet
+}
+
 export interface ParticipantRank {
   name: string;
   value: number;       // exact-hit count or points, depending on the ranking
@@ -206,6 +211,50 @@ export default async function EstatisticasPage() {
     hitters: m.predictions.map((p) => p.user.name),
   }));
 
+  // --- Next match + who hasn't filled it ---
+  // Next match to be played: earliest SCHEDULED match with both teams assigned.
+  // Advances on its own as games finish (page is force-dynamic).
+  const nextMatch = await prisma.match.findFirst({
+    where: {
+      status: "SCHEDULED",
+      homeTeamId: { not: null },
+      awayTeamId: { not: null },
+    },
+    orderBy: { matchDate: "asc" },
+    include: {
+      homeTeam: { select: { name: true } },
+      awayTeam: { select: { name: true } },
+    },
+  });
+  const nextMatchPredUserIds = nextMatch
+    ? new Set(
+        (
+          await prisma.matchPrediction.findMany({
+            where: { matchId: nextMatch.id },
+            select: { userId: true },
+          })
+        ).map((p) => p.userId),
+      )
+    : new Set<string>();
+  const nextMatchPending: NextMatchPending = {
+    label: nextMatch
+      ? `${phaseLabel[nextMatch.phase] ?? nextMatch.phase} · ${nextMatch.homeTeam?.name} × ${nextMatch.awayTeam?.name} · ${new Date(
+          nextMatch.matchDate,
+        )
+          .toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "America/Sao_Paulo",
+          })
+          .replace(", ", " às ")}`
+      : null,
+    users: nextMatch
+      ? allUsers.filter((u) => !nextMatchPredUserIds.has(u.id)).map((u) => u.name)
+      : [],
+  };
+
   // --- Participant rankings: group-phase exact hits + per-phase points ---
   // One pass over every participant's scored predictions. Match-prediction
   // points are read from the persisted `points` field (same source the live
@@ -296,6 +345,7 @@ export default async function EstatisticasPage() {
         userOptions={userOptions}
         groupExactRanking={groupExactRanking}
         phasePointRankings={phasePointRankings}
+        nextMatchPending={nextMatchPending}
       />
     </div>
   );

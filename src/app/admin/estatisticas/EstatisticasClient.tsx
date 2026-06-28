@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch, UserOption, ParticipantRank, PhasePointRanking } from "./page";
+import type { RankedTeam, MatchOption, TeamOption, GroupPendingUser, ExactHitMatch, UserOption, ParticipantRank, PhasePointRanking, NextMatchPending } from "./page";
 import type { TeamDistribution } from "@/app/api/admin/stats/team/route";
 import type { HeadToHead } from "@/app/api/admin/stats/head-to-head/route";
 import { formatName } from "@/lib/formatName";
@@ -80,12 +80,21 @@ function PendingSection({
   groupPendingUsers,
   bracketPendingUsers,
   groupTotal,
+  nextMatchPending,
 }: {
   unpaidUsers: string[];
   groupPendingUsers: GroupPendingUser[];
   bracketPendingUsers: string[];
   groupTotal: number;
+  nextMatchPending: NextMatchPending;
 }) {
+  const nextMatchText =
+    !nextMatchPending.label
+      ? "✅ *Próximo jogo — Nosso Bolão 2026*\n\nNenhum próximo jogo no momento."
+      : nextMatchPending.users.length === 0
+        ? `✅ *Próximo jogo: ${nextMatchPending.label}*\n\nTodos já palpitaram!`
+        : `⏭️ *Falta palpitar — ${nextMatchPending.label} (Nosso Bolão 2026)*\n\n${nextMatchPending.users.map((n) => `• ${formatName(n)}`).join("\n")}`;
+
   const unpaidText =
     unpaidUsers.length === 0
       ? "✅ *Pagamentos — Nosso Bolão 2026*\n\nTodos os participantes já pagaram!"
@@ -103,6 +112,28 @@ function PendingSection({
 
   return (
     <div className="space-y-3">
+      {nextMatchPending.label && (
+        <PendingListCard
+          title={`Próximo jogo — falta palpitar`}
+          emoji="⏭️"
+          copyText={nextMatchText}
+        >
+          <p className="text-[11px] text-gray-400 mb-2 -mt-1">{nextMatchPending.label}</p>
+          {nextMatchPending.users.length === 0 ? (
+            <p className="text-sm text-green-600 font-medium">✅ Todos já palpitaram o próximo jogo!</p>
+          ) : (
+            <ul className="space-y-1">
+              {nextMatchPending.users.map((n) => (
+                <li key={n} className="text-sm flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                  {formatName(n)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </PendingListCard>
+      )}
+
       <PendingListCard title="Pagamento pendente" emoji="💸" copyText={unpaidText}>
         {unpaidUsers.length === 0 ? (
           <p className="text-sm text-green-600 font-medium">✅ Todos pagaram!</p>
@@ -1072,6 +1103,7 @@ export default function EstatisticasClient({
   userOptions,
   groupExactRanking,
   phasePointRankings,
+  nextMatchPending,
 }: {
   champions: { ranking: RankedTeam[]; total: number };
   runnersUp: { ranking: RankedTeam[]; total: number };
@@ -1088,6 +1120,7 @@ export default function EstatisticasClient({
   userOptions: UserOption[];
   groupExactRanking: ParticipantRank[];
   phasePointRankings: PhasePointRanking[];
+  nextMatchPending: NextMatchPending;
 }) {
   const popularText =
     `🎯 *Placares mais apostados (geral) — Nosso Bolão 2026*\n\n` +
@@ -1134,6 +1167,7 @@ export default function EstatisticasClient({
           groupPendingUsers={groupPendingUsers}
           bracketPendingUsers={bracketPendingUsers}
           groupTotal={groupTotal}
+          nextMatchPending={nextMatchPending}
         />
       </section>
 
