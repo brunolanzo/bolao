@@ -57,11 +57,25 @@ export async function GET(request: Request) {
     String(d.getUTCMonth() + 1).padStart(2, "0") +
     String(d.getUTCDate()).padStart(2, "0");
 
-  // Fetch each distinct matchday once, then match locally (cheap on ESPN).
-  const distinctDates = [...new Set(matches.map((m) => ymd(new Date(m.matchDate))))];
-  const byDate = new Map<string, EspnMatch[]>();
-  for (const date of distinctDates) {
-    byDate.set(date, await fetchEspnByDate(date));
+  // ESPN groups its scoreboard by "matchday", and a game that kicks off after
+  // UTC midnight is listed under the PREVIOUS day's matchday. So for each stored
+  // date we also fetch the day before/after and search across all of them — this
+  // keeps the sync robust (and idempotent) for late-night knockout kickoffs.
+  const shiftDay = (date: string, days: number) => {
+    const d = new Date(`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return ymd(d);
+  };
+  const wantedDates = new Set<string>();
+  for (const m of matches) {
+    const base = ymd(new Date(m.matchDate));
+    wantedDates.add(shiftDay(base, -1));
+    wantedDates.add(base);
+    wantedDates.add(shiftDay(base, 1));
+  }
+  const allEvents: EspnMatch[] = [];
+  for (const date of wantedDates) {
+    allEvents.push(...(await fetchEspnByDate(date)));
   }
 
   const FOUR_DAYS = 4 * 24 * 60 * 60 * 1000;
@@ -77,18 +91,24 @@ export async function GET(request: Request) {
     }
 
     const stored = new Date(match.matchDate);
-    const events = byDate.get(ymd(stored)) ?? [];
-    // Orientation doesn't matter for the kickoff time — match the team pair.
-    const ev = events.find(
+    // Match the team pair (orientation-independent). If the pair shows up more
+    // than once across the fetched window, take the kickoff closest to stored.
+    const candidates = allEvents.filter(
       (e) =>
-        (e.homeAbbr === homeEspn && e.awayAbbr === awayEspn) ||
-        (e.homeAbbr === awayEspn && e.awayAbbr === homeEspn),
+        e.kickoff &&
+        ((e.homeAbbr === homeEspn && e.awayAbbr === awayEspn) ||
+          (e.homeAbbr === awayEspn && e.awayAbbr === homeEspn)),
     );
-
-    if (!ev || !ev.kickoff) {
+    if (candidates.length === 0) {
       results.push({ matchId: match.id, result: "não encontrado na ESPN" });
       continue;
     }
+    const ev = candidates.reduce((best, e) =>
+      Math.abs(new Date(e.kickoff).getTime() - stored.getTime()) <
+      Math.abs(new Date(best.kickoff).getTime() - stored.getTime())
+        ? e
+        : best,
+    );
 
     const real = new Date(ev.kickoff);
     if (isNaN(real.getTime())) {
