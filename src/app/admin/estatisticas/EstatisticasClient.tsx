@@ -268,9 +268,8 @@ function ParticipantRankingCard({
   // For phase point rankings, append "X acertos (Y%)" — teams correctly
   // predicted to reach the phase, out of how many were picked.
   const acertosSuffix = (r: ParticipantRank): string => {
-    if (r.acertos == null || !r.total) return "";
-    const pct = Math.round((r.acertos / r.total) * 100);
-    return ` · ${r.acertos} acertos (${pct}%)`;
+    if (r.acertos == null) return "";
+    return ` · ${r.acertos} ${r.acertos === 1 ? "acerto" : "acertos"}`;
   };
   const waText =
     ranking.length > 0
@@ -311,10 +310,10 @@ function ParticipantRankingCard({
                 </div>
                 <span className="w-32 shrink-0 text-right text-gray-600 text-xs">
                   <span className="font-medium text-gray-700">{formatValue(r.value)}</span>
-                  {r.acertos != null && r.total ? (
+                  {r.acertos != null ? (
                     <span className="text-gray-400">
                       {" · "}
-                      {r.acertos} ✓ ({Math.round((r.acertos / r.total) * 100)}%)
+                      {r.acertos} ✓
                     </span>
                   ) : null}
                 </span>
