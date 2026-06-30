@@ -48,6 +48,10 @@ export interface NextMatchPending {
 export interface ParticipantRank {
   name: string;
   value: number;       // exact-hit count or points, depending on the ranking
+  // Phase point rankings only: how many teams the participant correctly
+  // predicted would reach this phase, out of how many they picked.
+  acertos?: number;
+  total?: number;
 }
 
 export interface PhasePointRanking {
@@ -270,8 +274,7 @@ export default async function EstatisticasPage() {
         select: { points: true, match: { select: { phase: true } } },
       },
       phasePredictions: {
-        where: { points: { not: null } },
-        select: { points: true, phase: true },
+        select: { points: true, phase: true, correct: true },
       },
     },
   });
@@ -310,10 +313,18 @@ export default async function EstatisticasPage() {
           const matchPts = u.matchPredictions
             .filter((p) => p.match.phase === key)
             .reduce((sum, p) => sum + (p.points ?? 0), 0);
-          const bonusPts = u.phasePredictions
-            .filter((p) => p.phase === key)
-            .reduce((sum, p) => sum + (p.points ?? 0), 0);
-          return { name: u.name, value: matchPts + bonusPts };
+          const phasePreds = u.phasePredictions.filter((p) => p.phase === key);
+          const bonusPts = phasePreds.reduce((sum, p) => sum + (p.points ?? 0), 0);
+          // Acertos = teams the participant correctly predicted would reach this
+          // phase; total = how many teams they picked for it.
+          const total = phasePreds.length;
+          const acertos = phasePreds.filter((p) => p.correct === true).length;
+          const entry: ParticipantRank = { name: u.name, value: matchPts + bonusPts };
+          if (total > 0) {
+            entry.acertos = acertos;
+            entry.total = total;
+          }
+          return entry;
         })
         .filter((r) => r.value > 0)
         .sort(byValueThenName),

@@ -265,12 +265,19 @@ function ParticipantRankingCard({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const max = ranking.length > 0 ? ranking[0].value : 0;
+  // For phase point rankings, append "X acertos (Y%)" — teams correctly
+  // predicted to reach the phase, out of how many were picked.
+  const acertosSuffix = (r: ParticipantRank): string => {
+    if (r.acertos == null || !r.total) return "";
+    const pct = Math.round((r.acertos / r.total) * 100);
+    return ` · ${r.acertos} acertos (${pct}%)`;
+  };
   const waText =
     ranking.length > 0
       ? `${waTitle}\n\n` +
         ranking
           .slice(0, 10)
-          .map((r, i) => `${medal(i)} ${formatName(r.name)} — ${formatValue(r.value)}`)
+          .map((r, i) => `${medal(i)} ${formatName(r.name)} — ${formatValue(r.value)}${acertosSuffix(r)}`)
           .join("\n")
       : `${waTitle}\n\n${emptyText}`;
 
@@ -302,8 +309,14 @@ function ParticipantRankingCard({
                     style={{ width: `${max > 0 ? Math.round((r.value / max) * 100) : 0}%` }}
                   />
                 </div>
-                <span className="w-20 shrink-0 text-right text-gray-600 text-xs">
-                  {formatValue(r.value)}
+                <span className="w-32 shrink-0 text-right text-gray-600 text-xs">
+                  <span className="font-medium text-gray-700">{formatValue(r.value)}</span>
+                  {r.acertos != null && r.total ? (
+                    <span className="text-gray-400">
+                      {" · "}
+                      {r.acertos} ✓ ({Math.round((r.acertos / r.total) * 100)}%)
+                    </span>
+                  ) : null}
                 </span>
               </div>
             ))}
